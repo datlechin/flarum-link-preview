@@ -1,0 +1,54 @@
+{
+    "name": "datlechin/flarum-link-preview",
+    "description": "Automatically display a rich preview of the link contents.",
+    "keywords": [
+        "flarum",
+        "flarum-extension"
+    ],
+    "type": "flarum-extension",
+    "license": "MIT",
+    "require": {
+        "flarum/core": "^1.2"
+    },
+    "authors": [
+        {
+            "name": "Ngo Quoc Dat",
+            "email": "datlechin@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Datlechin\\LinkPreview\\": "src/"
+        }
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "Link Preview",
+            "category": "feature",
+            "icon": {
+                "name": "fas fa-eye",
+                "color": "#fff",
+                "backgroundColor": "#D3241C"
+            }
+        },
+        "flarum-cli": {
+            "modules": {
+                "admin": false,
+                "forum": true,
+                "js": true,
+                "jsCommon": false,
+                "css": true,
+                "locale": false,
+                "gitConf": true,
+                "githubActions": true,
+                "prettier": true,
+                "typescript": false,
+                "bundlewatch": false,
+                "backendTesting": false,
+                "editorConfig": true,
+                "styleci": true
+            }
+        }
+    }
+}

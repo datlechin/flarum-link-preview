@@ -1,0 +1,47 @@
+.LinkPreview {
+  background: @primary-color;
+  padding: 10px;
+  display: flex;
+  border-radius: var(--border-radius);
+
+  a {
+    color: var(--button-bg);
+  }
+
+  &-image {
+    width: 60px;
+    .fa-spinner {
+      color: var(--button-bg);
+      font-size: 2em;
+    }
+  }
+
+  &-main {
+    margin-left: 15px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  &-title {
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 3px;
+  }
+
+
+  // description
+  &-description {
+    font-size: 12px;
+    color: var(--body-bg);
+  }
+
+  &-domain {
+    font-size: 10px;
+
+    a {
+      color: @muted-more-color;
+    }
+  }
+}
