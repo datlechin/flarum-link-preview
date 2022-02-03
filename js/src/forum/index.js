@@ -49,8 +49,10 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
       domainLink.target = '_blank';
 
       const domainName = href.split('/')[2].replace('www.', '');
+      const domainUrl = href.split('/')[0] + '//' + domainName;
       domainLink.textContent = domainName;
       domain.appendChild(domainLink);
+      domainLink.href = domainUrl;
 
       const loadingIcon = document.createElement('i');
       loadingIcon.classList.add('fa', 'fa-spinner', 'fa-spin');
@@ -67,18 +69,10 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
         })
         .then((data) => {
           img.src = data.image ? data.image : 'https://www.google.com/s2/favicons?sz=64&domain_url=' + domainName;
-          if (data.url) {
-            titleLink.href = data.url;
-          }
-          if (data.title) {
-            titleLink.textContent = data.title;
-          }
-          if (data.description) {
-            description.textContent = data.description;
-          }
-          if (data.domain) {
-            domainLink.textContent = data.domain;
-          }
+          titleLink.href = data.url ? data.url : href;
+          titleLink.textContent = data.title ? data.title : domainName;
+          description.textContent = data.description ? data.description : '';
+          domainLink.textContent = data.site_name ? data.site_name : domainName;
         });
     }
   });
