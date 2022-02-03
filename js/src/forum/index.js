@@ -52,6 +52,11 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
 
           const domainName = href.split('/')[2].replace('www.', '');
           const domainUrl = href.split('/')[0] + '//' + domainName;
+
+          const favicon = document.createElement('img');
+          favicon.src = 'https://www.google.com/s2/favicons?sz=64&domain_url=' + domainUrl;
+          domain.appendChild(favicon);
+
           domainLink.textContent = domainName;
           domain.appendChild(domainLink);
           domainLink.href = domainUrl;

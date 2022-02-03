@@ -3,7 +3,9 @@
     "description": "Automatically display a rich preview of the link contents.",
     "keywords": [
         "flarum",
-        "flarum-extension"
+        "flarum-extension",
+        "link preview",
+        "preview"
     ],
     "type": "flarum-extension",
     "license": "MIT",
@@ -17,11 +19,16 @@
             "role": "Developer"
         }
     ],
+    "support": {
+        "source": "https://github.com/datlechin/flarum-birthdays",
+        "forum": "https://discuss.flarum.org/d/30011"
+    },
     "autoload": {
         "psr-4": {
             "Datlechin\\LinkPreview\\": "src/"
         }
     },
+    "homepage": "https://ngoquocdat.com",
     "extra": {
         "flarum-extension": {
             "title": "Link Preview",
