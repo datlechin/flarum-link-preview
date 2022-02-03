@@ -4,7 +4,7 @@ import CommentPost from 'flarum/forum/components/CommentPost';
 
 app.initializers.add('datlechin/flarum-link-preview', () => {
   extend(CommentPost.prototype, 'oncreate', function () {
-    const links = this.element.querySelectorAll('.Post-body a');
+    const links = this.element.querySelectorAll('.Post-body a[href]');
 
     for (let i = 0; i < links.length; i++) {
       const link = links[i];
