@@ -47,7 +47,7 @@
                 "js": true,
                 "jsCommon": false,
                 "css": true,
-                "locale": false,
+                "locale": true,
                 "gitConf": true,
                 "githubActions": true,
                 "prettier": true,

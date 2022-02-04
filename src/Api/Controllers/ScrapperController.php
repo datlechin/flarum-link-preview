@@ -24,11 +24,12 @@ class ScrapperController implements RequestHandlerInterface
     public function handle(Request $request): Response
     {
         $url = isset($request->getQueryParams()['url']) ? $request->getQueryParams()['url'] : '';
+        $domain = parse_url($url, PHP_URL_HOST);
 
-        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+        if (filter_var($url, FILTER_VALIDATE_URL) === false || gethostbyname($domain) === $domain) {
             return new JsonResponse([
                 'error' => 'Invalid URL',
-            ], 400);
+            ]);
         }
 
         $this->web->go($url);

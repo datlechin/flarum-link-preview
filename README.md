@@ -6,7 +6,7 @@ A [Flarum](http://flarum.org) extension. Automatically display a rich preview of
 
 This extension uses Google Favicon service to get the favicon.
 
-![](https://i.imgur.com/iZRE1gf.png)
+![](https://i.imgur.com/e5AcfJ7.png)
 
 ## Installation
 

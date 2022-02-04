@@ -15,8 +15,10 @@ use Flarum\Extend;
 
 return [
     (new Extend\Frontend('forum'))
-        ->js(__DIR__.'/js/dist/forum.js')
-        ->css(__DIR__.'/less/forum.less'),
+        ->js(__DIR__ . '/js/dist/forum.js')
+        ->css(__DIR__ . '/less/forum.less'),
+
+    new Extend\Locales(__DIR__ . '/locale'),
 
     (new Extend\Routes('api'))
         ->get('/datlechin-link-preview', 'datlechin-link-preview', Api\Controllers\ScrapperController::class),
