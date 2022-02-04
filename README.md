@@ -4,7 +4,9 @@
 
 A [Flarum](http://flarum.org) extension. Automatically display a rich preview of the link contents, such as title, description and image.
 
-![](https://i.imgur.com/fiXTK7C.png)
+This extension uses Google Favicon service to get the favicon.
+
+![](https://i.imgur.com/iZRE1gf.png)
 
 ## Installation
 

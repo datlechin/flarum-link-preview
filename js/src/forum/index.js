@@ -65,17 +65,16 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
           loadingIcon.classList.add('fa', 'fa-spinner', 'fa-spin');
           imageWrapper.appendChild(loadingIcon);
 
-          fetch(`https://meta-grabber.herokuapp.com?url=` + href, {
-            method: 'GET',
-            mode: 'cors',
-            credentials: 'omit',
-          })
-            .then((result) => {
-              loadingIcon.remove();
-              return result.json();
+          console.log();
+
+          app
+            .request({
+              url: app.forum.attribute('apiUrl') + '/datlechin-link-preview?url=' + encodeURIComponent(href),
+              method: 'GET',
             })
             .then((data) => {
-              img.src = data.image ? data.image : 'https://www.google.com/s2/favicons?sz=64&domain_url=' + domainName;
+              loadingIcon.remove();
+              img.src = data.image ? data.image : 'https://www.google.com/s2/favicons?sz=64&domain_url=' + domainUrl;
               titleLink.href = data.url ? data.url : href;
               titleLink.textContent = data.title ? data.title : domainName;
               description.textContent = data.description ? data.description : '';
