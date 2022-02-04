@@ -10,7 +10,8 @@
     "type": "flarum-extension",
     "license": "MIT",
     "require": {
-        "flarum/core": "^1.2"
+        "flarum/core": "^1.2",
+        "spekulatius/phpscraper": "^0.5.2"
     },
     "authors": [
         {
