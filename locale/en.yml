@@ -1,5 +1,9 @@
 datlechin-link-preview:
   admin:
+    settings:
+    blacklist_label: Blacklist
+    blacklist_help: Enter a comma-separated list of domains or urls to exclude from the link preview.
+    blacklist_placeholder: e.g. facebook.com,https://domain.com/path
 
   forum:
     site_cannot_be_reached: This site cannot be reached.

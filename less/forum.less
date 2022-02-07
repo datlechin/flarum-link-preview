@@ -1,6 +1,6 @@
 .LinkPreview {
   background: @primary-color;
-  padding: 7px 10px;
+  padding: 5px 10px;
   display: flex;
   border-radius: var(--border-radius);
   margin-top: 5px;
@@ -15,9 +15,14 @@
 
   &-image {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    width: 50px;
+    width: 70px;
+    padding: 7px 0;
+
+    @media @phone {
+      width: 50px;
+    }
 
     .fa-spinner {
       color: var(--button-bg);

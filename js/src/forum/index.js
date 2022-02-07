@@ -4,13 +4,21 @@ import CommentPost from 'flarum/forum/components/CommentPost';
 
 app.initializers.add('datlechin/flarum-link-preview', () => {
   extend(CommentPost.prototype, 'oncreate', function () {
+    const blacklist = app.forum.attribute('datlechin-link-preview.blacklist');
+    const blacklistArray = blacklist
+      ? blacklist.split(',').map(function (item) {
+          return item.trim();
+        })
+      : [];
+
     const links = this.element.querySelectorAll('.Post-body a[rel]');
 
     links.forEach((link) => {
       const href = link.getAttribute('href');
+      const domain = href.split('/')[2].replace('www.', '');
 
       if (!link.classList.contains('PostMention') || !link.classList.contains('UserMention')) {
-        if (href === link.textContent) {
+        if (href === link.textContent && !blacklistArray.includes(domain) && !blacklistArray.includes(href)) {
           const wrapper = document.createElement('div');
           wrapper.classList.add('LinkPreview');
           link.parentNode.insertBefore(wrapper, link);
@@ -47,14 +55,13 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
           domainLink.href = href;
           domainLink.target = '_blank';
 
-          const siteName = href.split('/')[2].replace('www.', '');
-          const siteUrl = href.split('/')[0] + '//' + siteName;
+          const siteUrl = href.split('/')[0] + '//' + domain;
 
           const favicon = document.createElement('img');
           favicon.setAttribute('src', 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl);
           domainWrapper.appendChild(favicon);
 
-          domainLink.textContent = siteName;
+          domainLink.textContent = domain;
           domainWrapper.appendChild(domainLink);
           domainLink.href = siteUrl;
 
@@ -76,9 +83,9 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
               img.setAttribute('src', image);
 
               titleLink.href = data.url ? data.url : href;
-              titleLink.textContent = data.title ? data.title : siteName;
+              titleLink.textContent = data.title ? data.title : domain;
               description.textContent = data.description ? data.description : '';
-              domainLink.textContent = data.site_name ? data.site_name : siteName;
+              domainLink.textContent = data.site_name ? data.site_name : domain;
 
               if (data.error) {
                 img.setAttribute('src', 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl);

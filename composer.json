@@ -42,7 +42,7 @@
         },
         "flarum-cli": {
             "modules": {
-                "admin": false,
+                "admin": true,
                 "forum": true,
                 "js": true,
                 "jsCommon": false,
