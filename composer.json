@@ -11,7 +11,7 @@
     "license": "MIT",
     "require": {
         "flarum/core": "^1.2",
-        "spekulatius/phpscraper": "^0.5.2"
+        "datlechin/phpscraper": "^0.5.3"
     },
     "authors": [
         {

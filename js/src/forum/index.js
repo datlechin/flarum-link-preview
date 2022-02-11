@@ -79,8 +79,14 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
             .then((data) => {
               loadingIcon.remove();
 
-              const image = data.image ? data.image : 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl;
-              img.setAttribute('src', image);
+              if (data.image) {
+                img.setAttribute('src', data.image);
+              } else {
+                img.remove();
+                const errorIcon = document.createElement('i');
+                errorIcon.classList.add('fas', 'fa-image');
+                imageWrapper.appendChild(errorIcon);
+              }
 
               titleLink.href = data.url ? data.url : href;
               titleLink.textContent = data.title ? data.title : domain;
@@ -88,7 +94,6 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
               domainLink.textContent = data.site_name ? data.site_name : domain;
 
               if (data.error) {
-                img.setAttribute('src', 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl);
                 titleLink.textContent = app.translator.trans('datlechin-link-preview.forum.site_cannot_be_reached');
                 titleLink.removeAttribute('href');
                 description.textContent = '';
