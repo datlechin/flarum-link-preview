@@ -20,7 +20,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
       if (!link.classList.contains('PostMention') || !link.classList.contains('UserMention')) {
         if (href === link.textContent && !blacklistArray.includes(domain) && !blacklistArray.includes(href)) {
           if (!app.forum.attribute('datlechin-link-preview.convertMediaURLs')) {
-            if (href.match(/\.(jpe?g|png|gif|svg|webp|mp3|mp4)$/)) return;
+            if (href.match(/\.(jpe?g|png|gif|svg|webp|mp3|mp4|m4a|wav)$/)) return;
           }
           const wrapper = document.createElement('div');
           wrapper.classList.add('LinkPreview');
