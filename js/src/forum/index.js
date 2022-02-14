@@ -82,15 +82,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
             .then((data) => {
               loadingIcon.remove();
 
-              if (data.image) {
-                img.setAttribute('src', data.image);
-              } else {
-                img.remove();
-                const errorIcon = document.createElement('i');
-                errorIcon.classList.add('fas', 'fa-image');
-                imageWrapper.appendChild(errorIcon);
-              }
-
+              img.setAttribute('src', data.image ? data.image : 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl);
               titleLink.href = data.url ? data.url : href;
               titleLink.textContent = data.title ? data.title : domain;
               description.textContent = data.description ? data.description : '';
