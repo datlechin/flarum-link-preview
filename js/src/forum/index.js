@@ -22,79 +22,70 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
           if (!app.forum.attribute('datlechin-link-preview.convertMediaURLs')) {
             if (href.match(/\.(jpe?g|png|gif|svg|webp|mp3|mp4|m4a|wav)$/)) return;
           }
-          const wrapper = document.createElement('div');
-          wrapper.classList.add('LinkPreview');
-          link.parentNode.insertBefore(wrapper, link);
-          wrapper.appendChild(link);
-
-          const imageWrapper = document.createElement('div');
-          imageWrapper.classList.add('LinkPreview-image');
-          wrapper.appendChild(imageWrapper);
-
-          const img = document.createElement('img');
-          imageWrapper.appendChild(img);
-
-          const mainWrapper = document.createElement('div');
-          mainWrapper.classList.add('LinkPreview-main');
-          wrapper.appendChild(mainWrapper);
-
-          const titleWrapper = document.createElement('div');
-          titleWrapper.classList.add('LinkPreview-title');
-          mainWrapper.appendChild(titleWrapper);
-
-          const titleLink = document.createElement('a');
-          titleLink.target = '_blank';
-          titleWrapper.appendChild(titleLink);
-
-          const description = document.createElement('div');
-          description.classList.add('LinkPreview-description');
-          mainWrapper.appendChild(description);
-
-          const domainWrapper = document.createElement('div');
-          domainWrapper.classList.add('LinkPreview-domain');
-          mainWrapper.appendChild(domainWrapper);
-
-          const domainLink = document.createElement('a');
-          domainLink.href = href;
-          domainLink.target = '_blank';
-
           const siteUrl = href.split('/')[0] + '//' + domain;
 
-          const favicon = document.createElement('img');
-          favicon.setAttribute('src', 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl);
-          domainWrapper.appendChild(favicon);
+          const linkPreviewWrapper = document.createElement('div');
+          const linkPreviewImage = document.createElement('div');
+          const linkPreviewImg = document.createElement('img');
+          const linkPreviewMain = document.createElement('div');
+          const linkPreviewTitle = document.createElement('div');
+          const linkPreviewTitleURL = document.createElement('a');
+          const linkPreviewDescription = document.createElement('div');
+          const linkPreviewDomain = document.createElement('div');
+          const linkPreviewDomainURL = document.createElement('a');
+          const linkPreviewDomainFavicon = document.createElement('img');
+          const linkPreviewLoadingIcon = document.createElement('i');
 
-          domainLink.textContent = domain;
-          domainWrapper.appendChild(domainLink);
-          domainLink.href = siteUrl;
+          linkPreviewWrapper.classList.add('LinkPreview');
+          linkPreviewImage.classList.add('LinkPreview-image');
+          linkPreviewMain.classList.add('LinkPreview-main');
+          linkPreviewTitle.classList.add('LinkPreview-title');
+          linkPreviewTitleURL.target = '_blank';
+          linkPreviewDescription.classList.add('LinkPreview-description');
+          linkPreviewDomain.classList.add('LinkPreview-domain');
+          linkPreviewDomainURL.href = href;
+          linkPreviewDomainURL.target = '_blank';
+          linkPreviewDomainURL.textContent = domain;
+          linkPreviewDomainURL.href = siteUrl;
+          linkPreviewDomainFavicon.setAttribute('src', 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl);
+          linkPreviewLoadingIcon.classList.add('fa', 'fa-spinner', 'fa-spin');
 
-          const loadingIcon = document.createElement('i');
-          loadingIcon.classList.add('fa', 'fa-spinner', 'fa-spin');
-          imageWrapper.appendChild(loadingIcon);
+          link.parentNode.insertBefore(linkPreviewWrapper, link);
+          linkPreviewWrapper.appendChild(link);
+          linkPreviewWrapper.appendChild(linkPreviewImage);
+          linkPreviewImage.appendChild(linkPreviewImg);
+          linkPreviewWrapper.appendChild(linkPreviewMain);
+          linkPreviewMain.appendChild(linkPreviewTitle);
+          linkPreviewTitle.appendChild(linkPreviewTitleURL);
+          linkPreviewMain.appendChild(linkPreviewDescription);
+          linkPreviewMain.appendChild(linkPreviewDomain);
+          linkPreviewDomain.appendChild(linkPreviewDomainFavicon);
+          linkPreviewDomain.appendChild(linkPreviewDomainURL);
+          linkPreviewImage.appendChild(linkPreviewLoadingIcon);
 
           link.remove();
 
-          app
-            .request({
-              url: app.forum.attribute('apiUrl') + '/datlechin-link-preview?url=' + encodeURIComponent(href),
-              method: 'GET',
-            })
-            .then((data) => {
-              loadingIcon.remove();
+          // app
+          //   .request({
+          //     url: app.forum.attribute('apiUrl') + '/datlechin-link-preview?url=' + encodeURIComponent(href),
+          //     method: 'GET',
+          //   })
+          //   .then((data) => {
+          //     linkPreviewLoadingIcon.remove();
 
-              img.setAttribute('src', data.image ? data.image : 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl);
-              titleLink.href = data.url ? data.url : href;
-              titleLink.textContent = data.title ? data.title : domain;
-              description.textContent = data.description ? data.description : '';
-              domainLink.textContent = data.site_name ? data.site_name : domain;
+          //     linkPreviewImg.setAttribute('src', data.image ?? 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl);
+          //     linkPreviewTitleURL.href = data.url ?? href;
+          //     linkPreviewTitleURL.textContent = data.title ?? domain;
+          //     linkPreviewDescription.textContent = data.description ?? '';
+          //     linkPreviewDomainURL.textContent = data.site_name ?? domain;
 
-              if (data.error) {
-                titleLink.textContent = app.translator.trans('datlechin-link-preview.forum.site_cannot_be_reached');
-                titleLink.removeAttribute('href');
-                description.textContent = '';
-                domainLink.removeAttribute('href');
-              }
-            });
+          //     if (data.error) {
+          //       linkPreviewTitleURL.textContent = app.translator.trans('datlechin-link-preview.forum.site_cannot_be_reached');
+          //       linkPreviewTitleURL.removeAttribute('href');
+          //       linkPreviewDescription.textContent = '';
+          //       linkPreviewDomainURL.removeAttribute('href');
+          //     }
+          //   });
         }
       }
     });
