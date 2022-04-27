@@ -21,7 +21,7 @@
         }
     ],
     "support": {
-        "source": "https://github.com/datlechin/flarum-birthdays",
+        "source": "https://github.com/datlechin/flarum-link-preview",
         "forum": "https://discuss.flarum.org/d/30011"
     },
     "autoload": {
