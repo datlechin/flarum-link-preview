@@ -65,27 +65,27 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
 
           link.remove();
 
-          // app
-          //   .request({
-          //     url: app.forum.attribute('apiUrl') + '/datlechin-link-preview?url=' + encodeURIComponent(href),
-          //     method: 'GET',
-          //   })
-          //   .then((data) => {
-          //     linkPreviewLoadingIcon.remove();
+          app
+            .request({
+              url: app.forum.attribute('apiUrl') + '/datlechin-link-preview?url=' + encodeURIComponent(href),
+              method: 'GET',
+            })
+            .then((data) => {
+              linkPreviewLoadingIcon.remove();
 
-          //     linkPreviewImg.setAttribute('src', data.image ?? 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl);
-          //     linkPreviewTitleURL.href = data.url ?? href;
-          //     linkPreviewTitleURL.textContent = data.title ?? domain;
-          //     linkPreviewDescription.textContent = data.description ?? '';
-          //     linkPreviewDomainURL.textContent = data.site_name ?? domain;
+              linkPreviewImg.setAttribute('src', data.image ?? 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl);
+              linkPreviewTitleURL.href = data.url ?? href;
+              linkPreviewTitleURL.textContent = data.title ?? domain;
+              linkPreviewDescription.textContent = data.description ?? '';
+              linkPreviewDomainURL.textContent = data.site_name ?? domain;
 
-          //     if (data.error) {
-          //       linkPreviewTitleURL.textContent = app.translator.trans('datlechin-link-preview.forum.site_cannot_be_reached');
-          //       linkPreviewTitleURL.removeAttribute('href');
-          //       linkPreviewDescription.textContent = '';
-          //       linkPreviewDomainURL.removeAttribute('href');
-          //     }
-          //   });
+              if (data.error) {
+                linkPreviewTitleURL.textContent = app.translator.trans('datlechin-link-preview.forum.site_cannot_be_reached');
+                linkPreviewTitleURL.removeAttribute('href');
+                linkPreviewDescription.textContent = '';
+                linkPreviewDomainURL.removeAttribute('href');
+              }
+            });
         }
       }
     });
