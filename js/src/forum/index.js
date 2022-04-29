@@ -79,12 +79,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
               linkPreviewDescription.textContent = data.description ?? '';
               linkPreviewDomainURL.textContent = data.site_name ?? domain;
 
-              if (data.error) {
-                linkPreviewTitleURL.textContent = app.translator.trans('datlechin-link-preview.forum.site_cannot_be_reached');
-                linkPreviewTitleURL.removeAttribute('href');
-                linkPreviewDescription.textContent = '';
-                linkPreviewDomainURL.removeAttribute('href');
-              }
+              if (data.error) linkPreviewTitleURL.textContent = app.translator.trans('datlechin-link-preview.forum.site_cannot_be_reached');
             });
         }
       }
