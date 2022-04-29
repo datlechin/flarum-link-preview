@@ -79,7 +79,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
               linkPreviewDescription.textContent = data.description ?? '';
               linkPreviewDomainURL.textContent = data.site_name ?? domain;
 
-              if (data.error) linkPreviewTitleURL.textContent = data.error
+              data.error ? (linkPreviewTitleURL.textContent = data.error) : null;
             });
         }
       }
