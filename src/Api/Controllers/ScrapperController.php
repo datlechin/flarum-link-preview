@@ -35,10 +35,10 @@ class ScrapperController implements RequestHandlerInterface
         $this->web->go($url);
 
         return new JsonResponse([
-            'site_name' => $this->web->openGraph['og:site_name'] ?? null,
-            'title' => $this->web->title ?? $this->web->openGraph['og:title'] ?? null,
-            'description' => $this->web->description ?? $this->web->openGraph['og:description'] ?? null,
-            'image' => $this->web->image ?? $this->web->openGraph['og:image'] ?? null,
+            'site_name' => $this->web->openGraph['og:site_name'] ?? $this->web->twitterCard['twitter:site'] ?? null,
+            'title' => $this->web->title ?? $this->web->openGraph['og:title']  ?? $this->web->twitterCard['twitter:title'] ?? null,
+            'description' => $this->web->description ?? $this->web->openGraph['og:description'] ?? $this->web->twitterCard['twitter:description'] ?? null,
+            'image' => $this->web->image ?? $this->web->openGraph['og:image'] ?? $this->web->twitterCard['twitter:image'] ?? null,
         ]);
     }
 }
