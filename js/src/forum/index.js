@@ -15,7 +15,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
 
     links.forEach((link) => {
       const href = link.getAttribute('href');
-      const domain = href.split('/')[2]
+      const domain = href.split('/')[2];
 
       if (!link.classList.contains('PostMention') || !link.classList.contains('UserMention')) {
         if (href === link.textContent && !blacklistArray.includes(domain) && !blacklistArray.includes(href)) {
