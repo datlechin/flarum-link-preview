@@ -15,7 +15,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
 
     links.forEach((link) => {
       const href = link.getAttribute('href');
-      const domain = href.split('/')[2].replace('www.', '');
+      const domain = href.split('/')[2]
 
       if (!link.classList.contains('PostMention') || !link.classList.contains('UserMention')) {
         if (href === link.textContent && !blacklistArray.includes(domain) && !blacklistArray.includes(href)) {
@@ -47,7 +47,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
           linkPreviewDomainURL.target = '_blank';
           linkPreviewDomainURL.textContent = domain;
           linkPreviewDomainURL.href = siteUrl;
-          linkPreviewDomainFavicon.setAttribute('src', 'https://www.google.com/s2/favicons?sz=64&domain_url=' + siteUrl);
+          linkPreviewDomainFavicon.setAttribute('src', 'https://www.google.com/s2/favicons?sz=64&domain_url=' + href);
           linkPreviewLoadingIcon.classList.add('fa', 'fa-spinner', 'fa-spin');
 
           link.parentNode.insertBefore(linkPreviewWrapper, link);
