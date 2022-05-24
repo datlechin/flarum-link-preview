@@ -49,6 +49,9 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
           linkPreviewDomainURL.href = siteUrl;
           linkPreviewDomainFavicon.setAttribute('src', 'https://www.google.com/s2/favicons?sz=64&domain_url=' + href);
           linkPreviewLoadingIcon.classList.add('fa', 'fa-spinner', 'fa-spin');
+          linkPreviewImg.setAttribute('data-link-preview', '');
+          linkPreviewDomainFavicon.setAttribute('data-link-preview', '');
+
 
           link.parentNode.insertBefore(linkPreviewWrapper, link);
           linkPreviewWrapper.appendChild(link);
