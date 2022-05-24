@@ -52,7 +52,6 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
           linkPreviewImg.setAttribute('data-link-preview', '');
           linkPreviewDomainFavicon.setAttribute('data-link-preview', '');
 
-
           link.parentNode.insertBefore(linkPreviewWrapper, link);
           linkPreviewWrapper.appendChild(link);
           linkPreviewWrapper.appendChild(linkPreviewImage);
