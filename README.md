@@ -4,9 +4,9 @@
 
 A [Flarum](http://flarum.org) extension. Automatically display a rich preview of the link contents, such as title, description and image.
 
-This extension uses Google Favicon service to get the favicon.
+This extension uses Google Favicon to get website favicon and [PHPScraper](https://phpscraper.de) to get website information like title, description, ...
 
-![](https://i.imgur.com/e5AcfJ7.png)
+![](https://user-images.githubusercontent.com/56961917/190848122-6f0bf4a6-47eb-439e-9d6f-71b2b258f498.png)
 
 ## Installation
 
@@ -20,7 +20,6 @@ composer require datlechin/flarum-link-preview:"*"
 
 ```sh
 composer update datlechin/flarum-link-preview:"*"
-php flarum migrate
 php flarum cache:clear
 ```
 
