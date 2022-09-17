@@ -6,7 +6,7 @@ A [Flarum](http://flarum.org) extension. Automatically display a rich preview of
 
 This extension uses Google Favicon to get website favicon and [PHPScraper](https://phpscraper.de) to get website information like title, description, ...
 
-![](https://user-images.githubusercontent.com/56961917/190848122-6f0bf4a6-47eb-439e-9d6f-71b2b258f498.png)
+![](https://user-images.githubusercontent.com/56961917/190849018-4ffdfd1f-33a0-4b09-8df8-2c08a85aebe6.png)
 
 ## Installation
 
