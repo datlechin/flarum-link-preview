@@ -6,11 +6,14 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface;
-use spekulatius\phpscraper;
+use Spekulatius\PHPScraper\PHPScraper;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ScrapperController implements RequestHandlerInterface
 {
+    /**
+     * @var Spekulatius\PHPScraper\PHPScraper
+     */
     protected $web;
 
     /**
@@ -18,7 +21,7 @@ class ScrapperController implements RequestHandlerInterface
      */
     protected $translator;
 
-    public function __construct(phpscraper $web, TranslatorInterface $translator)
+    public function __construct(PHPScraper $web, TranslatorInterface $translator)
     {
         $this->web = $web;
         $this->translator = $translator;
