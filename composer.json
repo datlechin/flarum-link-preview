@@ -10,8 +10,8 @@
     "type": "flarum-extension",
     "license": "MIT",
     "require": {
-        "flarum/core": "^1.5",
-        "spekulatius/phpscraper": "^1.0.0"
+        "flarum/core": "^v1.6",
+        "spekulatius/phpscraper": "^1.0.2"
     },
     "authors": [
         {
@@ -29,7 +29,7 @@
             "Datlechin\\LinkPreview\\": "src/"
         }
     },
-    "homepage": "https://ngoquocdat.com",
+    "homepage": "https://ngoquocdat.dev",
     "extra": {
         "flarum-extension": {
             "title": "Link Preview",
