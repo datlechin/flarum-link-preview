@@ -7,7 +7,7 @@ datlechin-link-preview:
       convert_media_urls_label: Convert media URLs
       convert_media_urls_help: If enabled, this will convert all media URLs to link previews.
       use_google_favicons_label: Use Google Favicon API
-      use_google_favicons_help: If enabled, will use a Google service in the fronend to request the respective site's favicon.
+      use_google_favicons_help: If enabled, will use a Google service in the frontend to request the respective site's favicon.
 
   forum:
     site_cannot_be_reached: This site cannot be reached.
