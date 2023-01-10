@@ -12,6 +12,12 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
       type: 'checkbox',
     })
     .registerSetting({
+      setting: EXT_PREFIX + '.use_google_favicons',
+      label: app.translator.trans(EXT_PREFIX + '.admin.settings.use_google_favicons_label'),
+      help: app.translator.trans(EXT_PREFIX + '.admin.settings.use_google_favicons_help'),
+      type: 'checkbox',
+    })
+    .registerSetting({
       setting: EXT_PREFIX + '.blacklist',
       label: app.translator.trans(EXT_PREFIX + '.admin.settings.blacklist_label'),
       help: app.translator.trans(EXT_PREFIX + '.admin.settings.blacklist_help'),
