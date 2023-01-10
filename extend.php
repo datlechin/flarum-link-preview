@@ -29,5 +29,6 @@ return [
     (new Extend\Settings())
         ->serializeToForum('datlechin-link-preview.blacklist', 'datlechin-link-preview.blacklist')
         ->serializeToForum('datlechin-link-preview.whitelist', 'datlechin-link-preview.whitelist')
+        ->serializeToForum('datlechin-link-preview.useGoogleFavicons', 'datlechin-link-preview.use_google_favicons', 'boolval', true)
         ->serializeToForum('datlechin-link-preview.convertMediaURLs', 'datlechin-link-preview.convert_media_urls', 'boolval', true),
 ];

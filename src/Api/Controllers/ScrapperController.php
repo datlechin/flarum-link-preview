@@ -20,12 +20,19 @@ class ScrapperController implements RequestHandlerInterface
     protected $translator;
 
     /** @var array */
+    protected $blacklist = [];
+
+    /** @var array */
     protected $whitelist = [];
 
     public function __construct(PHPScraper $web, TranslatorInterface $translator, SettingsRepositoryInterface $settings)
     {
         $this->web = $web;
         $this->translator = $translator;
+        $this->blacklist = array_map(
+            'trim',
+            explode(',', $settings->get('datlechin-link-preview.blacklist') ?? '')
+        );
         $this->whitelist = array_map(
             'trim',
             explode(',', $settings->get('datlechin-link-preview.whitelist') ?? '')
@@ -41,7 +48,12 @@ class ScrapperController implements RequestHandlerInterface
         $url = $request->getQueryParams()['url'] ?? '';
         $domain = parse_url($url, PHP_URL_HOST);
 
-        if (! filter_var($url, FILTER_VALIDATE_URL) || ! in_array($domain, $this->whitelist, true) || gethostbyname($domain) === $domain) {
+        if (
+            ! filter_var($url, FILTER_VALIDATE_URL)
+            || ! in_array($domain, $this->whitelist, true)
+            || in_array($domain, $this->blacklist, true)
+            || gethostbyname($domain) === $domain
+        ) {
             return new JsonResponse([
                 'error' => $this->translator->trans('datlechin-link-preview.forum.site_cannot_be_reached')
             ]);

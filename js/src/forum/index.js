@@ -17,6 +17,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
           return item.trim();
         })
       : [];
+    const useGoogleFavicons = app.forum.attribute('datlechin-link-preview.useGoogleFavicons') ?? false;
 
     const links = this.element.querySelectorAll('.Post-body a[rel]');
 
@@ -30,7 +31,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
 
       m.mount(link, {
         view: function () {
-          return m(LinkPreview, { link });
+          return m(LinkPreview, { link, useGoogleFavicons: useGoogleFavicons });
         },
       });
     });
