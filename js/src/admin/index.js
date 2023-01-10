@@ -23,5 +23,12 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
       help: app.translator.trans(EXT_PREFIX + '.admin.settings.blacklist_help'),
       placeholder: app.translator.trans(EXT_PREFIX + '.admin.settings.blacklist_placeholder'),
       type: 'textarea',
+    })
+    .registerSetting({
+      setting: EXT_PREFIX + '.whitelist',
+      label: app.translator.trans(EXT_PREFIX + '.admin.settings.whitelist_label'),
+      help: app.translator.trans(EXT_PREFIX + '.admin.settings.whitelist_help'),
+      placeholder: app.translator.trans(EXT_PREFIX + '.admin.settings.whitelist_placeholder'),
+      type: 'textarea',
     });
 });

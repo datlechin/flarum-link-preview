@@ -11,6 +11,12 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
           return item.trim();
         })
       : [];
+    const whitelist = app.forum.attribute('datlechin-link-preview.whitelist');
+    const whitelistArray = whitelist
+      ? whitelist.split(',').map(function (item) {
+          return item.trim();
+        })
+      : [];
     const useGoogleFavicons = app.forum.attribute('datlechin-link-preview.useGoogleFavicons') ?? false;
 
     const links = this.element.querySelectorAll('.Post-body a[rel]');
@@ -20,7 +26,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
       const domain = href.split('/')[2].split('.').slice(-2).join('.');
 
       if (link.classList.contains('PostMention') || link.classList.contains('UserMention')) return;
-      if (blacklistArray.includes(domain) || href !== link.textContent) return;
+      if (!whitelistArray.includes(domain) || blacklistArray.includes(domain) || href !== link.textContent) return;
       if (app.forum.attribute('datlechin-link-preview.convertMediaURLs') && href.match(/\.(jpe?g|png|gif|svg|webp|mp3|mp4|m4a|wav)$/)) return;
 
       m.mount(link, {
