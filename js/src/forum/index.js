@@ -29,7 +29,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
       if (
         (whitelistArray.length && !whitelistArray.includes(domain))
         || (blacklistArray.length && blacklistArray.includes(domain))
-        || href !== link.textContent
+        || href.replace(/\/$/, '') !== link.textContent.replace(/\/$/, '')
       ) return;
       if (app.forum.attribute('datlechin-link-preview.convertMediaURLs') && href.match(/\.(jpe?g|png|gif|svg|webp|mp3|mp4|m4a|wav)$/)) return;
 
