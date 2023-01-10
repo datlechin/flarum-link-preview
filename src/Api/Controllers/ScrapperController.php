@@ -2,6 +2,7 @@
 
 namespace Datlechin\LinkPreview\Api\Controllers;
 
+use Flarum\Settings\SettingsRepositoryInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -18,10 +19,17 @@ class ScrapperController implements RequestHandlerInterface
     /** @var TranslatorInterface $translator */
     protected $translator;
 
-    public function __construct(PHPScraper $web, TranslatorInterface $translator)
+    /** @var array */
+    protected $blacklist = [];
+
+    public function __construct(PHPScraper $web, TranslatorInterface $translator, SettingsRepositoryInterface $settings)
     {
         $this->web = $web;
         $this->translator = $translator;
+        $this->blacklist = array_map(
+            'trim',
+            explode(',', $settings->get('datlechin-link-preview.blacklist') ?? '')
+        );
     }
 
     /*
@@ -33,7 +41,7 @@ class ScrapperController implements RequestHandlerInterface
         $url = $request->getQueryParams()['url'] ?? '';
         $domain = parse_url($url, PHP_URL_HOST);
 
-        if (! filter_var($url, FILTER_VALIDATE_URL) || gethostbyname($domain) === $domain) {
+        if (! filter_var($url, FILTER_VALIDATE_URL) || in_array($domain, $this->blacklist, true) || gethostbyname($domain) === $domain) {
             return new JsonResponse([
                 'error' => $this->translator->trans('datlechin-link-preview.forum.site_cannot_be_reached')
             ]);
