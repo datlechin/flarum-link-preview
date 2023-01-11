@@ -69,7 +69,6 @@ class ScrapperController implements RequestHandlerInterface
             ! filter_var($url, FILTER_VALIDATE_URL)
             || ! in_array($domain, $this->whitelist, true)
             || in_array($domain, $this->blacklist, true)
-            || gethostbyname($domain) === $domain
         ) {
             return new JsonResponse([
                 'error' => $this->translator->trans('datlechin-link-preview.forum.site_cannot_be_reached')
@@ -82,6 +81,12 @@ class ScrapperController implements RequestHandlerInterface
             if (null !== $data) {
                 return new JsonResponse($data);
             }
+        }
+
+        if (gethostbyname($domain) === $domain) {
+            return new JsonResponse([
+                'error' => $this->translator->trans('datlechin-link-preview.forum.site_cannot_be_reached')
+            ]);
         }
 
         try {
