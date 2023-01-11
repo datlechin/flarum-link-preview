@@ -30,5 +30,12 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
       help: app.translator.trans(EXT_PREFIX + '.admin.settings.whitelist_help'),
       placeholder: app.translator.trans(EXT_PREFIX + '.admin.settings.whitelist_placeholder'),
       type: 'textarea',
+    })
+    .registerSetting({
+      setting: EXT_PREFIX + '.cache_time',
+      label: app.translator.trans(EXT_PREFIX + '.admin.settings.cache_time_label'),
+      help: app.translator.trans(EXT_PREFIX + '.admin.settings.cache_time_help'),
+      type: 'number',
+      min: 0,
     });
 });

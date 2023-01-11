@@ -12,6 +12,7 @@
 namespace Datlechin\LinkPreview;
 
 use Flarum\Extend;
+use Flarum\Settings\Event\Deserializing;
 
 return [
     (new Extend\Frontend('forum'))
@@ -29,6 +30,18 @@ return [
     (new Extend\Settings())
         ->serializeToForum('datlechin-link-preview.blacklist', 'datlechin-link-preview.blacklist')
         ->serializeToForum('datlechin-link-preview.whitelist', 'datlechin-link-preview.whitelist')
-        ->serializeToForum('datlechin-link-preview.useGoogleFavicons', 'datlechin-link-preview.use_google_favicons', 'boolval', true)
-        ->serializeToForum('datlechin-link-preview.convertMediaURLs', 'datlechin-link-preview.convert_media_urls', 'boolval', true),
+        ->serializeToForum('datlechin-link-preview.useGoogleFavicons', 'datlechin-link-preview.use_google_favicons', 'boolval')
+        ->serializeToForum('datlechin-link-preview.convertMediaURLs', 'datlechin-link-preview.convert_media_urls', 'boolval'),
+
+    (new Extend\Event())
+        ->listen(Deserializing::class, function (Deserializing $event) {
+            $event->settings = array_merge(
+                [
+                    'datlechin-link-preview.use_google_favicons' => false,
+                    'datlechin-link-preview.convert_media_urls' => false,
+                    'datlechin-link-preview.cache_time' => 60,
+                ],
+                $event->settings
+            );
+        })
 ];
