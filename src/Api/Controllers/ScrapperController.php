@@ -41,19 +41,23 @@ class ScrapperController implements RequestHandlerInterface
         $this->web = $web;
         $this->translator = $translator;
         $this->cache = $cache;
-        $this->blacklist = array_map(
-            'trim',
-            explode(',', $settings->get('datlechin-link-preview.blacklist') ?? '')
-        );
-        $this->whitelist = array_map(
-            'trim',
-            explode(',', $settings->get('datlechin-link-preview.whitelist') ?? '')
-        );
         $cacheTime = $settings->get('datlechin-link-preview.cache_time');
         if (!is_numeric($cacheTime)) {
             $cacheTime = 60;
         }
         $this->cacheTime = intval($cacheTime);
+        $this->blacklist = array_filter(
+            array_map(
+                'trim',
+                explode(',', $settings->get('datlechin-link-preview.blacklist') ?? '')
+            )
+        );
+        $this->whitelist = array_filter(
+                array_map(
+                'trim',
+                explode(',', $settings->get('datlechin-link-preview.whitelist') ?? '')
+            )
+        );
     }
 
     /*
@@ -67,8 +71,8 @@ class ScrapperController implements RequestHandlerInterface
 
         if (
             ! filter_var($url, FILTER_VALIDATE_URL)
-            || ! in_array($domain, $this->whitelist, true)
-            || in_array($domain, $this->blacklist, true)
+            || ($this->whitelist && ! in_array($domain, $this->whitelist, true))
+            || ($this->blacklist && in_array($domain, $this->blacklist, true))
         ) {
             return new JsonResponse([
                 'error' => $this->translator->trans('datlechin-link-preview.forum.site_cannot_be_reached')
