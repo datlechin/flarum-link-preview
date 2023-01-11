@@ -53,7 +53,7 @@ class ScrapperController implements RequestHandlerInterface
             )
         );
         $this->whitelist = array_filter(
-                array_map(
+            array_map(
                 'trim',
                 explode(',', $settings->get('datlechin-link-preview.whitelist') ?? '')
             )
