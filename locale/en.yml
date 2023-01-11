@@ -11,6 +11,8 @@ datlechin-link-preview:
       convert_media_urls_help: If enabled, this will convert all media URLs to link previews.
       use_google_favicons_label: Use Google Favicon API
       use_google_favicons_help: If enabled, will use a Google service in the frontend to request the respective site's favicon.
+      cache_time_label: Cache Time
+      cache_time_help: Number of minutes crawled links will be cached before they are accessed again. Set to 0 to disable link caching. Defaults to 60 minutes if not set.
 
   forum:
     site_cannot_be_reached: This site cannot be reached.
