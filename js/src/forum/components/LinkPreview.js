@@ -6,12 +6,12 @@ export default class LinkPreview extends Component {
     this.loading = true;
     this.link = vnode.attrs.link;
     this.linkAttributes = (() => {
-      const attributes = {}
+      const attributes = {};
       for (const attribute of Object.values(this.link.attributes)) {
         attributes[attribute.name] = attribute.value;
       }
       return attributes;
-    })()
+    })();
     this.data = null;
     this.useGoogleFavicons = vnode.attrs.useGoogleFavicons;
 
@@ -24,9 +24,7 @@ export default class LinkPreview extends Component {
           {this.loading ? <i className="fa fa-spinner fa-spin" /> : <img src={this.data?.image ?? this.getFavicon()} data-link-preview />}
         </div>
         <div className="LinkPreview-main">
-          <div className="LinkPreview-title">
-            {this.getLink(this.loading ? this.getDomain() : this.data?.title ?? this.data.error)}
-          </div>
+          <div className="LinkPreview-title">{this.getLink(this.loading ? this.getDomain() : this.data?.title ?? this.data.error)}</div>
           <div className="LinkPreview-description">{this.loading ? '' : this.data?.description ?? ''}</div>
           <div className="LinkPreview-domain">
             {this.useGoogleFavicons ? <img src={this.getFavicon()} data-link-preview /> : null}
@@ -42,7 +40,7 @@ export default class LinkPreview extends Component {
   }
 
   getLink(text) {
-    return m('a', this.linkAttributes, text)
+    return m('a', this.linkAttributes, text);
   }
 
   getHref() {
