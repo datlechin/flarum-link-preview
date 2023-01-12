@@ -13,9 +13,11 @@ export default class LinkPreview extends Component {
   view() {
     return (
       <div className="LinkPreview">
-        <div className="LinkPreview-image">
-          {this.loading ? <i className="fa fa-spinner fa-spin" /> : <img src={this.data?.image ?? this.getFavicon()} data-link-preview />}
-        </div>
+        {this.loading || this.getImage() ? (
+          <div className="LinkPreview-image">
+            {this.loading ? <i className="fa fa-spinner fa-spin" /> : <img src={this.getImage()} data-link-preview />}
+          </div>
+        ) : null}
         <div className="LinkPreview-main">
           <div className="LinkPreview-title">
             <a href={this.link} target="_blank">
@@ -44,6 +46,10 @@ export default class LinkPreview extends Component {
 
   getDomain() {
     return this.getHref().split('/')[2];
+  }
+
+  getImage() {
+    return this.data?.image ?? this.getFavicon();
   }
 
   getFavicon() {
