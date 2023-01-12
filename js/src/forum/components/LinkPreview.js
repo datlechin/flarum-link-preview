@@ -26,7 +26,7 @@ export default class LinkPreview extends Component {
           </div>
           <div className="LinkPreview-description">{this.loading ? '' : this.data?.description ?? ''}</div>
           <div className="LinkPreview-domain">
-            {this.useGoogleFavicons ? <img src={this.getFavicon()} data-link-preview /> : null}
+            {this.useGoogleFavicons ? <img src={this.getFavicon()} data-link-preview /> : <i className="fa fa-external-link-alt"></i>}
             <a href={this.getHref()} target="_blank">
               {this.loading ? this.getDomain() : this.data?.site_name ?? this.getDomain()}
             </a>
