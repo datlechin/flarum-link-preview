@@ -28,20 +28,13 @@ return [
         ->get('/datlechin-link-preview', 'datlechin-link-preview', Api\Controllers\ScrapperController::class),
 
     (new Extend\Settings())
+        ->default('datlechin-link-preview.blacklist', '')
+        ->default('datlechin-link-preview.whitelist', '')
+        ->default('datlechin-link-preview.use_google_favicons', false)
+        ->default('datlechin-link-preview.convert_media_urls', false)
+        ->default('datlechin-link-preview.cache_time', 60)
         ->serializeToForum('datlechin-link-preview.blacklist', 'datlechin-link-preview.blacklist')
         ->serializeToForum('datlechin-link-preview.whitelist', 'datlechin-link-preview.whitelist')
         ->serializeToForum('datlechin-link-preview.useGoogleFavicons', 'datlechin-link-preview.use_google_favicons', 'boolval')
         ->serializeToForum('datlechin-link-preview.convertMediaURLs', 'datlechin-link-preview.convert_media_urls', 'boolval'),
-
-    (new Extend\Event())
-        ->listen(Deserializing::class, function (Deserializing $event) {
-            $event->settings = array_merge(
-                [
-                    'datlechin-link-preview.use_google_favicons' => false,
-                    'datlechin-link-preview.convert_media_urls' => false,
-                    'datlechin-link-preview.cache_time' => 60,
-                ],
-                $event->settings
-            );
-        })
 ];

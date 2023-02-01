@@ -32,6 +32,9 @@ class ScrapperController implements RequestHandlerInterface
     /** @var int */
     private $cacheTime;
 
+    /** @var SettingsRepositoryInterface */
+    private $settings;
+
     public function __construct(
         PHPScraper $web,
         TranslatorInterface $translator,
@@ -46,18 +49,9 @@ class ScrapperController implements RequestHandlerInterface
             $cacheTime = 60;
         }
         $this->cacheTime = intval($cacheTime);
-        $this->blacklist = array_filter(
-            array_map(
-                'trim',
-                explode(',', $settings->get('datlechin-link-preview.blacklist') ?? '')
-            )
-        );
-        $this->whitelist = array_filter(
-            array_map(
-                'trim',
-                explode(',', $settings->get('datlechin-link-preview.whitelist') ?? '')
-            )
-        );
+        $this->settings = $settings;
+        $this->blacklist = $this->getMultiDimensionalSetting('datlechin-link-preview.blacklist');
+        $this->whitelist = $this->getMultiDimensionalSetting('datlechin-link-preview.whitelist');
     }
 
     /*
@@ -67,12 +61,17 @@ class ScrapperController implements RequestHandlerInterface
     public function handle(Request $request): Response
     {
         $url = $request->getQueryParams()['url'] ?? '';
-        $domain = parse_url($url, PHP_URL_HOST);
 
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+            return new JsonResponse([
+                'error' => $this->translator->trans('datlechin-link-preview.forum.site_cannot_be_reached')
+            ]);
+        }
+
+        $normalizedUrl = preg_replace('/^https?:\/\/(.+?)\/?$/i', '$1', $url);
         if (
-            ! filter_var($url, FILTER_VALIDATE_URL)
-            || ($this->whitelist && ! in_array($domain, $this->whitelist, true))
-            || ($this->blacklist && in_array($domain, $this->blacklist, true))
+            ($this->whitelist && ! $this->inList($normalizedUrl, $this->whitelist))
+            || ($this->blacklist && $this->inList($normalizedUrl, $this->blacklist))
         ) {
             return new JsonResponse([
                 'error' => $this->translator->trans('datlechin-link-preview.forum.site_cannot_be_reached')
@@ -80,13 +79,14 @@ class ScrapperController implements RequestHandlerInterface
         }
 
         if ($this->cacheTime) {
-            $cacheKey = 'datlechin-link-preview:' . md5(preg_replace('/^https?:\/\/(.+)\/?$/', '$1', $url));
+            $cacheKey = 'datlechin-link-preview:' . md5($normalizedUrl);
             $data = $this->cache->get($cacheKey);
             if (null !== $data) {
                 return new JsonResponse($data);
             }
         }
 
+        $domain = parse_url($url, PHP_URL_HOST);
         if (gethostbyname($domain) === $domain) {
             return new JsonResponse([
                 'error' => $this->translator->trans('datlechin-link-preview.forum.site_cannot_be_reached')
@@ -114,5 +114,42 @@ class ScrapperController implements RequestHandlerInterface
                 'error' => $th->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @param string $setting
+     * @return array
+     */
+    private function getMultiDimensionalSetting(string $setting): array
+    {
+        $items = preg_split('/[,\\n]/', $this->settings->get($setting) ?? '') ?: [];
+        return array_filter(array_map('trim', $items));
+    }
+
+    /**
+     * @param string $needle
+     * @param array $haystack
+     */
+    private function inList(string $needle, array $haystack): bool
+    {
+        if (! $haystack) {
+            return false;
+        }
+        if (in_array($needle, $haystack, true)) {
+            return true;
+        }
+        foreach ($haystack as $item) {
+            $quoted = strtr(
+                preg_quote($item, '/'),
+                [
+                    '\\*' => '.*',
+                    '\\?' => '.',
+                ]
+            );
+            if (preg_match("/$quoted/i", $needle)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -5,34 +5,52 @@ import LinkPreview from './components/LinkPreview';
 
 app.initializers.add('datlechin/flarum-link-preview', () => {
   extend(CommentPost.prototype, 'oncreate', function () {
-    const blacklist = app.forum.attribute('datlechin-link-preview.blacklist');
-    const blacklistArray = blacklist
-      ? blacklist.split(',').map(function (item) {
-          return item.trim();
-        })
-      : [];
-    const whitelist = app.forum.attribute('datlechin-link-preview.whitelist');
-    const whitelistArray = whitelist
-      ? whitelist.split(',').map(function (item) {
-          return item.trim();
-        })
-      : [];
+    const getMultiDimensionalSetting = (key) => {
+      const setting = app.forum.attribute(key);
+      return setting ? setting.split(/[,\n]/).map((item) => item.trim()) : [];
+    };
+
+    const inList = (needle, haystack) => {
+      if (0 === haystack.length) {
+        return false;
+      }
+      if (haystack.includes(needle)) {
+        return true;
+      }
+      for (const item of haystack) {
+        const quoted = item
+          .replace(/[-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&')
+          .replace('\\*', '.*')
+          .replace('\\?', '.');
+        if (needle.match(new RegExp(quoted, 'i'))) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const blacklistArray = getMultiDimensionalSetting('datlechin-link-preview.blacklist');
+    const whitelistArray = getMultiDimensionalSetting('datlechin-link-preview.whitelist');
     const useGoogleFavicons = app.forum.attribute('datlechin-link-preview.useGoogleFavicons') ?? false;
 
-    const links = this.element.querySelectorAll('.Post-body a[rel]');
-
-    links.forEach((link) => {
-      const href = link.href;
-      const domain = href.split('/')[2].split('.').slice(-2).join('.');
-
-      if (link.classList.contains('PostMention') || link.classList.contains('UserMention')) return;
-      if (
-        (whitelistArray.length && !whitelistArray.includes(domain)) ||
-        (blacklistArray.length && blacklistArray.includes(domain)) ||
-        href.replace(/\/$/, '') !== link.textContent.replace(/\/$/, '')
-      )
+    this.element.querySelectorAll('.Post-body a[rel]').forEach((link) => {
+      if (link.classList.contains('PostMention') || link.classList.contains('UserMention')) {
         return;
-      if (app.forum.attribute('datlechin-link-preview.convertMediaURLs') && href.match(/\.(jpe?g|png|gif|svg|webp|mp3|mp4|m4a|wav)$/)) return;
+      }
+
+      const normalizedUrl = link.href.replace(/^https?:\/\/(.+?)\/?$/i, '$1');
+
+      if (
+        (whitelistArray.length && !inList(normalizedUrl, whitelistArray)) ||
+        (blacklistArray.length && inList(normalizedUrl, blacklistArray)) ||
+        link.href.replace(/\/$/, '') !== link.textContent.replace(/\/$/, '')
+      ) {
+        return;
+      }
+
+      if (app.forum.attribute('datlechin-link-preview.convertMediaURLs') && normalizedUrl.match(/\.(jpe?g|png|gif|svg|webp|mp3|mp4|m4a|wav)$/)) {
+        return;
+      }
 
       m.mount(link, {
         view: function () {
