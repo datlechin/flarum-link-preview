@@ -1,5 +1,6 @@
 import Component from 'flarum/common/Component';
 import icon from 'flarum/common/helpers/icon';
+import Link from 'flarum/common/components/Link';
 
 export default class LinkPreview extends Component {
   oninit(vnode) {
@@ -20,11 +21,11 @@ export default class LinkPreview extends Component {
           <div className="LinkPreview-image">{this.loading ? icon('fas fa-spinner fa-spin') : <img src={this.getImage()} data-link-preview />}</div>
         ) : null}
         <div className="LinkPreview-main">
-          <div className="LinkPreview-title">{this.getLink(this.loading ? this.getDomain() : this.data?.title ?? this.data.error)}</div>
+          <div className="LinkPreview-title">{this.getLink(this.data?.title ?? this.data?.error)}</div>
           <div className="LinkPreview-description">{this.loading ? '' : this.data?.description ?? ''}</div>
           <div className="LinkPreview-domain">
             {this.useGoogleFavicons ? <img src={this.getFavicon()} data-link-preview /> : icon('fas fa-external-link-alt')}
-            {this.getLink(this.loading ? this.getDomain() : this.data?.site_name ?? this.getDomain())}
+            {this.getLink(this.data?.site_name)}
           </div>
         </div>
       </div>
@@ -36,7 +37,7 @@ export default class LinkPreview extends Component {
   }
 
   getLink(text) {
-    return m('a', this.linkAttributes, text);
+    return <Link {...this.linkAttributes}>{this.loading ? this.getDomain() : text ?? this.getDomain()}</Link>;
   }
 
   getHref() {
