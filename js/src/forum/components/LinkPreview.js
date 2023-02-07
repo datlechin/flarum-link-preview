@@ -2,6 +2,7 @@ import Component from 'flarum/common/Component';
 import icon from 'flarum/common/helpers/icon';
 import Link from 'flarum/common/components/Link';
 import classList from 'flarum/common/utils/classList';
+import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 
 export default class LinkPreview extends Component {
   oninit(vnode) {
@@ -23,7 +24,13 @@ export default class LinkPreview extends Component {
     return (
       <div className={'LinkPreview ' + classList(classes)}>
         {this.loading || this.getImage() ? (
-          <div className="LinkPreview-image">{this.loading ? icon('fas fa-spinner fa-spin') : <img src={this.getImage()} data-link-preview />}</div>
+          <div className="LinkPreview-image">
+            {this.loading ? (
+              <LoadingIndicator display="unset" containerClassName={classList('LinkPreview-loading', this.loading && 'active')} size="small" />
+            ) : (
+              <img src={this.getImage()} data-link-preview />
+            )}
+          </div>
         ) : null}
         <div className="LinkPreview-main">
           <div className="LinkPreview-title">{this.getLink(this.data?.title ?? this.data?.error)}</div>
