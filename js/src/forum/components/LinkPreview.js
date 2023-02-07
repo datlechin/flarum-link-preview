@@ -1,6 +1,7 @@
 import Component from 'flarum/common/Component';
 import icon from 'flarum/common/helpers/icon';
 import Link from 'flarum/common/components/Link';
+import classList from 'flarum/common/utils/classList';
 
 export default class LinkPreview extends Component {
   oninit(vnode) {
@@ -15,8 +16,12 @@ export default class LinkPreview extends Component {
   }
 
   view() {
+    const classes = {
+      loading: this.loading,
+    };
+
     return (
-      <div className="LinkPreview">
+      <div className={'LinkPreview ' + classList(classes)}>
         {this.loading || this.getImage() ? (
           <div className="LinkPreview-image">{this.loading ? icon('fas fa-spinner fa-spin') : <img src={this.getImage()} data-link-preview />}</div>
         ) : null}
