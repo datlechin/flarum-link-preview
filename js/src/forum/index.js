@@ -34,7 +34,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
     const useGoogleFavicons = app.forum.attribute('datlechin-link-preview.useGoogleFavicons') ?? false;
 
     this.element.querySelectorAll('.Post-body a[rel]').forEach((link) => {
-      if (link.classList.contains('PostMention') || link.classList.contains('UserMention')) {
+      if (link.classList.contains('PostMention') || link.classList.contains('UserMention') || link.classList.contains('LinkPreview-link')) {
         return;
       }
 
