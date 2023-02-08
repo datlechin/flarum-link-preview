@@ -45,19 +45,17 @@ class ScrapperController implements RequestHandlerInterface
         $this->translator = $translator;
         $this->cache = $cache;
         $cacheTime = $settings->get('datlechin-link-preview.cache_time');
-        if (!is_numeric($cacheTime)) {
+
+        if (! is_numeric($cacheTime)) {
             $cacheTime = 60;
         }
+
         $this->cacheTime = intval($cacheTime);
         $this->settings = $settings;
         $this->blacklist = $this->getMultiDimensionalSetting('datlechin-link-preview.blacklist');
         $this->whitelist = $this->getMultiDimensionalSetting('datlechin-link-preview.whitelist');
     }
 
-    /*
-     * @param Request $request
-     * @return Response
-     */
     public function handle(Request $request): Response
     {
         $url = $request->getQueryParams()['url'] ?? '';
@@ -69,6 +67,7 @@ class ScrapperController implements RequestHandlerInterface
         }
 
         $normalizedUrl = preg_replace('/^https?:\/\/(.+?)\/?$/i', '$1', $url);
+
         if (
             ($this->whitelist && ! $this->inList($normalizedUrl, $this->whitelist))
             || ($this->blacklist && $this->inList($normalizedUrl, $this->blacklist))
@@ -81,7 +80,8 @@ class ScrapperController implements RequestHandlerInterface
         if ($this->cacheTime) {
             $cacheKey = 'datlechin-link-preview:' . md5($normalizedUrl);
             $data = $this->cache->get($cacheKey);
-            if (null !== $data) {
+
+            if ($data) {
                 return new JsonResponse($data);
             }
         }
@@ -94,13 +94,14 @@ class ScrapperController implements RequestHandlerInterface
         }
 
         try {
-            $this->web->go($url);
+            $web = $this->web;
+            $web->go($url);
 
             $data = [
-                'site_name' => $this->web->openGraph['og:site_name'] ?? $this->web->twitterCard['twitter:site'] ?? null,
-                'title' => $this->web->title ?? $this->web->openGraph['og:title'] ?? $this->web->twitterCard['twitter:title'] ?? null,
-                'description' => $this->web->description ?? $this->web->openGraph['og:description'] ?? $this->web->twitterCard['twitter:description'] ?? null,
-                'image' => $this->web->image ?? $this->web->openGraph['og:image'] ?? $this->web->twitterCard['twitter:image'] ?? null,
+                'site_name' => $web->openGraph['og:site_name'] ?? $web->twitterCard['twitter:site'] ?? null,
+                'title' => $web->title ?? $web->openGraph['og:title'] ?? $web->twitterCard['twitter:title'] ?? null,
+                'description' => $web->description ?? $web->openGraph['og:description'] ?? $web->twitterCard['twitter:description'] ?? null,
+                'image' => $web->image ?? $web->openGraph['og:image'] ?? $web->twitterCard['twitter:image'] ?? null,
                 'accessed' => time(),
             ];
 
@@ -116,40 +117,34 @@ class ScrapperController implements RequestHandlerInterface
         }
     }
 
-    /**
-     * @param string $setting
-     * @return array
-     */
     private function getMultiDimensionalSetting(string $setting): array
     {
         $items = preg_split('/[,\\n]/', $this->settings->get($setting) ?? '') ?: [];
+
         return array_filter(array_map('trim', $items));
     }
 
-    /**
-     * @param string $needle
-     * @param array $haystack
-     */
     private function inList(string $needle, array $haystack): bool
     {
         if (! $haystack) {
             return false;
         }
+
         if (in_array($needle, $haystack, true)) {
             return true;
         }
+
         foreach ($haystack as $item) {
-            $quoted = strtr(
-                preg_quote($item, '/'),
-                [
-                    '\\*' => '.*',
-                    '\\?' => '.',
-                ]
-            );
+            $quoted = strtr(preg_quote($item, '/'), [
+                '\\*' => '.*',
+                '\\?' => '.',
+            ]);
+
             if (preg_match("/$quoted/i", $needle)) {
                 return true;
             }
         }
+
         return false;
     }
 }

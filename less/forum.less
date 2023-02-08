@@ -12,10 +12,14 @@
 
   &-image {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
     width: 60px;
     padding: 5px 0;
+
+    @media @phone {
+      align-items: center;
+    }
 
     img {
       width: 100%;
