@@ -22,7 +22,7 @@ export default class LinkPreview extends Component {
     };
 
     return (
-      <div className={'LinkPreview ' + classList(classes)}>
+      <div className={classList('LinkPreview', classes)}>
         {this.loading || this.getImage() ? (
           <div className="LinkPreview-image">
             {this.loading ? (
