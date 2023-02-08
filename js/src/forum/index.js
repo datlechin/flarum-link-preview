@@ -4,7 +4,7 @@ import CommentPost from 'flarum/forum/components/CommentPost';
 import LinkPreview from './components/LinkPreview';
 
 app.initializers.add('datlechin/flarum-link-preview', () => {
-  extend(CommentPost.prototype, 'oncreate', function () {
+  extend(CommentPost.prototype, 'refreshContent', function () {
     const getMultiDimensionalSetting = (key) => {
       const setting = app.forum.attribute(key);
       return setting ? setting.split(/[,\n]/).map((item) => item.trim()) : [];
