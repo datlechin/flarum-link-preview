@@ -11,8 +11,8 @@
 
 namespace Datlechin\LinkPreview;
 
+use Datlechin\LinkPreview\Api\Controllers\ScrapperController;
 use Flarum\Extend;
-use Flarum\Settings\Event\Deserializing;
 
 return [
     (new Extend\Frontend('forum'))
@@ -25,7 +25,7 @@ return [
     new Extend\Locales(__DIR__ . '/locale'),
 
     (new Extend\Routes('api'))
-        ->get('/datlechin-link-preview', 'datlechin-link-preview', Api\Controllers\ScrapperController::class),
+        ->get('/datlechin-link-preview', 'datlechin-link-preview', ScrapperController::class),
 
     (new Extend\Settings())
         ->default('datlechin-link-preview.blacklist', '')
