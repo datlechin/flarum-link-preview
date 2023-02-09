@@ -10,6 +10,8 @@ export default class LinkPreview extends Component {
     this.loading = true;
     this.link = vnode.attrs.link;
     this.linkAttributes = Object.assign({}, ...Array.from(this.link.attributes, ({ name, value }) => ({ [name]: value })));
+    this.linkClasses = this.linkAttributes.class || '';
+    delete this.linkAttributes.class;
     this.data = null;
     this.useGoogleFavicons = vnode.attrs.useGoogleFavicons;
 
@@ -22,7 +24,7 @@ export default class LinkPreview extends Component {
     };
 
     return (
-      <div className={'LinkPreview ' + classList(classes)}>
+      <div className={classList('LinkPreview', classes)}>
         {this.loading || this.getImage() ? (
           <div className="LinkPreview-image">
             {this.loading ? (
@@ -49,7 +51,11 @@ export default class LinkPreview extends Component {
   }
 
   getLink(text) {
-    return <Link {...this.linkAttributes}>{this.loading ? this.getDomain() : text ?? this.getDomain()}</Link>;
+    return (
+      <Link {...this.linkAttributes} className={classList('LinkPreview-link', this.linkClasses)}>
+        {this.loading ? this.getDomain() : text ?? this.getDomain()}
+      </Link>
+    );
   }
 
   getHref() {
