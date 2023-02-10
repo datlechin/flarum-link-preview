@@ -33,12 +33,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
     const whitelistArray = getMultiDimensionalSetting('datlechin-link-preview.whitelist');
     const convertMediaUrls = app.forum.attribute('datlechin-link-preview.convertMediaURLs') ?? false;
     const useGoogleFavicons = app.forum.attribute('datlechin-link-preview.useGoogleFavicons') ?? false;
-    const linkSelectorExcludes = [
-      '.PostMention',
-      '.UserMention',
-      '.LinkPreview-link',
-      '.LinkPreview-captured',
-    ].map(cls => `:not(${cls})`).join('');
+    const linkSelectorExcludes = ['.PostMention', '.UserMention', '.LinkPreview-link', '.LinkPreview-captured'].map((cls) => `:not(${cls})`).join('');
 
     this.element.querySelectorAll(`.Post-body a[rel]${linkSelectorExcludes}`).forEach((link) => {
       const normalizedUrl = link.href.replace(/^https?:\/\/(.+?)\/?$/i, '$1');
