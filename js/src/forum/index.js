@@ -33,6 +33,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
     const whitelistArray = getMultiDimensionalSetting('datlechin-link-preview.whitelist');
     const convertMediaUrls = app.forum.attribute('datlechin-link-preview.convertMediaURLs') ?? false;
     const useGoogleFavicons = app.forum.attribute('datlechin-link-preview.useGoogleFavicons') ?? false;
+    const openLinksInNewTab = app.forum.attribute('datlechin-link-preview.openLinksInNewTab') ?? false;
     const linkSelectorExcludes = ['.PostMention', '.UserMention', '.LinkPreview-link', '.LinkPreview-captured'].map((cls) => `:not(${cls})`).join('');
 
     this.element.querySelectorAll(`.Post-body a[rel]${linkSelectorExcludes}`).forEach((link) => {
@@ -52,7 +53,11 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
 
       m.mount(link, {
         view: function () {
-          return m(LinkPreview, { link, useGoogleFavicons: useGoogleFavicons });
+          return m(LinkPreview, {
+            link,
+            useGoogleFavicons: useGoogleFavicons,
+            openLinksInNewTab: openLinksInNewTab,
+          });
         },
       });
     });

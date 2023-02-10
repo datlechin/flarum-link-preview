@@ -13,6 +13,8 @@ datlechin-link-preview:
       use_google_favicons_help: If enabled, will use a Google service in the frontend to request the respective site's favicon.
       cache_time_label: Cache Time
       cache_time_help: Number of minutes crawled links will be cached before they are accessed again. Set to 0 to disable link caching. Defaults to 60 minutes if not set.
+      open_links_in_new_tab_label: Open links in new tab
+      open_links_in_new_tab_help: If enabled, links will be opened in a new tab.
 
   forum:
     site_cannot_be_reached: This site cannot be reached.

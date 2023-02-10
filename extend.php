@@ -33,8 +33,10 @@ return [
         ->default('datlechin-link-preview.use_google_favicons', false)
         ->default('datlechin-link-preview.convert_media_urls', false)
         ->default('datlechin-link-preview.cache_time', 60)
+        ->default('datlechin-link-preview.open_links_in_new_tab', true)
         ->serializeToForum('datlechin-link-preview.blacklist', 'datlechin-link-preview.blacklist')
         ->serializeToForum('datlechin-link-preview.whitelist', 'datlechin-link-preview.whitelist')
         ->serializeToForum('datlechin-link-preview.useGoogleFavicons', 'datlechin-link-preview.use_google_favicons', 'boolval')
-        ->serializeToForum('datlechin-link-preview.convertMediaURLs', 'datlechin-link-preview.convert_media_urls', 'boolval'),
+        ->serializeToForum('datlechin-link-preview.convertMediaURLs', 'datlechin-link-preview.convert_media_urls', 'boolval')
+        ->serializeToForum('datlechin-link-preview.openLinksInNewTab', 'datlechin-link-preview.open_links_in_new_tab', 'boolval'),
 ];

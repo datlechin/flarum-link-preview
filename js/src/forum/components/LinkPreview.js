@@ -7,14 +7,18 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 export default class LinkPreview extends Component {
   oninit(vnode) {
     super.oninit(vnode);
+
+    const attrs = vnode.attrs;
+
     this.loading = true;
-    this.link = vnode.attrs.link;
+    this.link = attrs.link;
     this.link.classList.add('LinkPreview-captured');
     this.linkAttributes = Object.assign({}, ...Array.from(this.link.attributes, ({ name, value }) => ({ [name]: value })));
     this.linkClasses = this.linkAttributes.class || '';
+    this.linkAttributes.target = attrs.openLinksInNewTab ? '_blank' : '_self';
     delete this.linkAttributes.class;
     this.data = null;
-    this.useGoogleFavicons = vnode.attrs.useGoogleFavicons;
+    this.useGoogleFavicons = attrs.useGoogleFavicons;
 
     this.fetchData();
   }
@@ -53,9 +57,9 @@ export default class LinkPreview extends Component {
 
   getLink(text) {
     return (
-      <Link {...this.linkAttributes} className={classList('LinkPreview-link', this.linkClasses)}>
+      <a {...this.linkAttributes} className={classList('LinkPreview-link', this.linkClasses)}>
         {this.loading ? this.getDomain() : text ?? this.getDomain()}
-      </Link>
+      </a>
     );
   }
 
