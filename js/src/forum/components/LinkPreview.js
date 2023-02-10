@@ -9,6 +9,7 @@ export default class LinkPreview extends Component {
     super.oninit(vnode);
     this.loading = true;
     this.link = vnode.attrs.link;
+    this.link.classList.add('LinkPreview-captured');
     this.linkAttributes = Object.assign({}, ...Array.from(this.link.attributes, ({ name, value }) => ({ [name]: value })));
     this.linkClasses = this.linkAttributes.class || '';
     delete this.linkAttributes.class;
