@@ -19,7 +19,7 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
       }
       for (const item of haystack) {
         const quoted = item
-          .replace(/[-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&')
+          .replace(/[-\[\]\/{}()*+?.\\^$|]/g, '\\$&')
           .replace('\\*', '.*')
           .replace('\\?', '.');
         if (needle.match(new RegExp(quoted, 'i'))) {
