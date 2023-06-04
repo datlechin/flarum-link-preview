@@ -14,26 +14,19 @@ use Throwable;
 
 class ScrapperController implements RequestHandlerInterface
 {
-    /** @var PHPScraper $web */
-    protected $web;
+    protected PHPScraper $web;
 
-    /** @var TranslatorInterface $translator */
-    protected $translator;
+    protected TranslatorInterface $translator;
 
-    /** @var array */
-    protected $blacklist = [];
+    protected array $blacklist = [];
 
-    /** @var array */
-    protected $whitelist = [];
+    protected array $whitelist = [];
 
-    /** @var Store */
-    protected $cache;
+    protected Store $cache;
 
-    /** @var int */
-    private $cacheTime;
+    protected int $cacheTime;
 
-    /** @var SettingsRepositoryInterface */
-    private $settings;
+    protected SettingsRepositoryInterface $settings;
 
     public function __construct(
         PHPScraper $web,
@@ -110,21 +103,21 @@ class ScrapperController implements RequestHandlerInterface
             }
 
             return new JsonResponse($data);
-        } catch (Throwable $th) {
+        } catch (Throwable $throwale) {
             return new JsonResponse([
-                'error' => $th->getMessage(),
+                'error' => $throwale->getMessage(),
             ]);
         }
     }
 
-    private function getMultiDimensionalSetting(string $setting): array
+    protected function getMultiDimensionalSetting(string $setting): array
     {
         $items = preg_split('/[,\\n]/', $this->settings->get($setting) ?? '') ?: [];
 
         return array_filter(array_map('trim', $items));
     }
 
-    private function inList(string $needle, array $haystack): bool
+    protected function inList(string $needle, array $haystack): bool
     {
         if (! $haystack) {
             return false;

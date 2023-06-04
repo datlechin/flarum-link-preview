@@ -72,17 +72,17 @@ export default class LinkPreview extends Component {
   }
 
   getImage() {
-    return this.data?.image ?? this.getFavicon();
+    return this.data?.image || this.getFavicon();
   }
 
   getFavicon() {
-    return this.useGoogleFavicons ? 'https://www.google.com/s2/favicons?sz=64&domain_url=' + this.getDomain() : null;
+    return this.useGoogleFavicons ? `https://www.google.com/s2/favicons?sz=64&domain_url=${this.getDomain()}` : null;
   }
 
   fetchData() {
     app
       .request({
-        url: app.forum.attribute('apiUrl') + '/datlechin-link-preview?url=' + encodeURIComponent(this.getHref()),
+        url: `${app.forum.attribute('apiUrl')}/datlechin-link-preview?url=${encodeURIComponent(this.getHref())}`,
         method: 'GET',
       })
       .then((data) => {
