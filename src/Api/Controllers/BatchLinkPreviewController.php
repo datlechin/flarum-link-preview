@@ -37,7 +37,7 @@ class BatchLinkPreviewController implements RequestHandlerInterface
             $processResult = $this->preProcessUrl($url);
             if (isset($processResult['data'])) {
                 $result[$url] = $processResult['data'];
-            } else if (isset($processResult['fetch'])) {
+            } elseif (isset($processResult['fetch'])) {
                 $urlsToFetch[$url] = $processResult['fetch'];
             } else {
                 $result[$url] = $processResult['error'];
@@ -52,7 +52,7 @@ class BatchLinkPreviewController implements RequestHandlerInterface
 
         foreach ($urlsToFetch as $originalUrl => $normalizedUrl) {
             $result[$originalUrl] = $fetchResults[$originalUrl] ?? [
-                'error' => 'Failed to fetch preview'
+                'error' => 'Failed to fetch preview',
             ];
         }
 
@@ -63,7 +63,7 @@ class BatchLinkPreviewController implements RequestHandlerInterface
     {
         if (!$this->service->isValidUrl($url)) {
             return [
-                'error' => $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached')
+                'error' => $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached'),
             ];
         }
 
@@ -71,7 +71,7 @@ class BatchLinkPreviewController implements RequestHandlerInterface
 
         if (!$this->service->isUrlAllowed($normalizedUrl)) {
             return [
-                'error' => $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached')
+                'error' => $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached'),
             ];
         }
 
@@ -93,7 +93,7 @@ class BatchLinkPreviewController implements RequestHandlerInterface
                 $promises[$originalUrl] = $this->service->getClient()->getAsync($originalUrl);
             } catch (Throwable $e) {
                 $results[$originalUrl] = [
-                    'error' => 'Failed to create request: ' . $e->getMessage()
+                    'error' => 'Failed to create request: ' . $e->getMessage(),
                 ];
             }
         }
@@ -112,7 +112,7 @@ class BatchLinkPreviewController implements RequestHandlerInterface
                     $results[$originalUrl] = [
                         'error' => $response['reason'] instanceof \Exception ?
                             $response['reason']->getMessage() :
-                            'Failed to fetch preview'
+                            'Failed to fetch preview',
                     ];
                     continue;
                 }
@@ -124,7 +124,7 @@ class BatchLinkPreviewController implements RequestHandlerInterface
                 $results[$originalUrl] = $data;
             } catch (Throwable $e) {
                 $results[$originalUrl] = [
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ];
             }
         }
