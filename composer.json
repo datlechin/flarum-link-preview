@@ -11,8 +11,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.1",
-        "flarum/core": "^v1.8",
-        "spekulatius/phpscraper": "^2.0.0"
+        "flarum/core": "^1.8",
+        "spekulatius/phpscraper": "^3.0"
     },
     "authors": [
         {
@@ -52,12 +52,15 @@
                 "gitConf": true,
                 "githubActions": true,
                 "prettier": true,
-                "typescript": false,
+                "typescript": true,
                 "bundlewatch": false,
                 "backendTesting": false,
                 "editorConfig": true,
                 "styleci": true
             }
         }
+    },
+    "require-dev": {
+        "laravel/pint": "^1.18"
     }
 }

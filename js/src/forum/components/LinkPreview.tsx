@@ -1,11 +1,33 @@
 import Component from 'flarum/common/Component';
 import icon from 'flarum/common/helpers/icon';
-import Link from 'flarum/common/components/Link';
 import classList from 'flarum/common/utils/classList';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import batchManager from '../utils/batch-manager';
+import type Mithril from 'mithril';
 
-export default class LinkPreview extends Component {
-  oninit(vnode) {
+interface LinkPreviewAttrs {
+  link: HTMLAnchorElement;
+  openLinksInNewTab: boolean;
+  useGoogleFavicons: boolean;
+}
+
+interface LinkPreviewData {
+  title?: string;
+  description?: string;
+  site_name?: string;
+  image?: string;
+  error?: string;
+}
+
+export default class LinkPreview extends Component<LinkPreviewAttrs> {
+  loading!: boolean;
+  link!: HTMLAnchorElement;
+  linkAttributes!: { [key: string]: string };
+  linkClasses!: string;
+  data!: LinkPreviewData | null;
+  useGoogleFavicons!: boolean;
+
+  oninit(vnode: Mithril.Vnode<LinkPreviewAttrs, this>) {
     super.oninit(vnode);
 
     const attrs = vnode.attrs;
@@ -41,7 +63,7 @@ export default class LinkPreview extends Component {
         ) : null}
         <div className="LinkPreview-main">
           <div className="LinkPreview-title">{this.getLink(this.data?.title ?? this.data?.error)}</div>
-          <div className="LinkPreview-description">{this.loading ? '' : this.data?.description ?? ''}</div>
+          <div className="LinkPreview-description">{this.loading ? '' : (this.data?.description ?? '')}</div>
           <div className="LinkPreview-domain">
             {this.useGoogleFavicons ? <img src={this.getFavicon()} data-link-preview /> : icon('fas fa-external-link-alt')}
             {this.getLink(this.data?.site_name)}
@@ -51,14 +73,16 @@ export default class LinkPreview extends Component {
     );
   }
 
-  oncreate(vnode) {
-    this.link.parentNode.insertBefore(vnode.dom, this.link);
+  oncreate(vnode: Mithril.VnodeDOM<LinkPreviewAttrs, this>) {
+    if (this.link.parentNode) {
+      this.link.parentNode.insertBefore(vnode.dom, this.link);
+    }
   }
 
-  getLink(text) {
+  getLink(text?: string) {
     return (
       <a {...this.linkAttributes} className={classList('LinkPreview-link', this.linkClasses)}>
-        {this.loading ? this.getDomain() : text ?? this.getDomain()}
+        {this.loading ? this.getDomain() : (text ?? this.getDomain())}
       </a>
     );
   }
@@ -80,18 +104,14 @@ export default class LinkPreview extends Component {
   }
 
   fetchData() {
-    app
-      .request({
-        url: `${app.forum.attribute('apiUrl')}/datlechin-link-preview?url=${encodeURIComponent(this.getHref())}`,
-        method: 'GET',
-      })
-      .then((data) => {
-        this.setData(data);
-        this.loading = false;
-      });
+    batchManager.add(this.getHref(), (data: LinkPreviewData) => {
+      this.setData(data);
+      this.loading = false;
+      m.redraw();
+    });
   }
 
-  setData(data) {
+  setData(data: LinkPreviewData) {
     this.data = data;
     m.redraw();
   }

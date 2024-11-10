@@ -1,6 +1,8 @@
 datlechin-link-preview:
   admin:
     settings:
+      enable_batch_requests_label: Enable Batch Requests
+      enable_batch_requests_help: Process multiple link previews in batches to improve performance. Disable to process each link individually.
       blacklist_label: Blacklist
       blacklist_help: Enter a comma-separated list of domains or urls to exclude from the link preview.
       blacklist_placeholder: e.g. facebook.com,https://domain.com/path
