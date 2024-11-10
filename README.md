@@ -4,20 +4,20 @@
 
 A [Flarum](https://github.com/flarum) extension. **Link Preview** extension automatically displays a rich preview of linked contents, including the title, description, and image. It uses Google Favicon to retrieve the website favicon and [PHPScraper](https://github.com/spekulatius/PHPScraper) to extract website information.
 
-![](https://user-images.githubusercontent.com/56961917/190849018-4ffdfd1f-33a0-4b09-8df8-2c08a85aebe6.png)
+![Screenshot showing an example of link preview in Flarum](https://user-images.githubusercontent.com/56961917/190849018-4ffdfd1f-33a0-4b09-8df8-2c08a85aebe6.png)
 
 ## Installation
 
 Install with composer:
 
 ```sh
-composer require datlechin/flarum-link-preview:"*"
+composer require datlechin/flarum-link-preview
 ```
 
 ## Updating
 
 ```sh
-composer update datlechin/flarum-link-preview:"*"
+composer update datlechin/flarum-link-preview
 php flarum cache:clear
 ```
 
