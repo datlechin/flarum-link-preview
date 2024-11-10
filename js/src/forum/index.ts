@@ -5,13 +5,13 @@ import LinkPreview from './components/LinkPreview';
 
 app.initializers.add('datlechin/flarum-link-preview', () => {
   extend(CommentPost.prototype, 'refreshContent', function () {
-    const getMultiDimensionalSetting = (key) => {
-      const setting = app.forum.attribute(key);
+    const getMultiDimensionalSetting = (key: string): string[] => {
+      const setting = app.forum.attribute<string>(key);
       return setting ? setting.split(/[,\n]/).map((item) => item.trim()) : [];
     };
 
-    const inList = (needle, haystack) => {
-      if (0 === haystack.length) {
+    const inList = (needle: string, haystack: string[]): boolean => {
+      if (haystack.length === 0) {
         return false;
       }
       if (haystack.includes(needle)) {
@@ -31,18 +31,18 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
 
     const blacklistArray = getMultiDimensionalSetting('datlechin-link-preview.blacklist');
     const whitelistArray = getMultiDimensionalSetting('datlechin-link-preview.whitelist');
-    const convertMediaUrls = app.forum.attribute('datlechin-link-preview.convertMediaURLs') ?? false;
-    const useGoogleFavicons = app.forum.attribute('datlechin-link-preview.useGoogleFavicons') ?? false;
-    const openLinksInNewTab = app.forum.attribute('datlechin-link-preview.openLinksInNewTab') ?? false;
+    const convertMediaUrls = app.forum.attribute<boolean>('datlechin-link-preview.convertMediaURLs') ?? false;
+    const useGoogleFavicons = app.forum.attribute<boolean>('datlechin-link-preview.useGoogleFavicons') ?? false;
+    const openLinksInNewTab = app.forum.attribute<boolean>('datlechin-link-preview.openLinksInNewTab') ?? false;
     const linkSelectorExcludes = ['.PostMention', '.UserMention', '.LinkPreview-link', '.LinkPreview-captured'].map((cls) => `:not(${cls})`).join('');
 
-    this.element.querySelectorAll(`.Post-body a[rel]${linkSelectorExcludes}`).forEach((link) => {
+    this.element.querySelectorAll<HTMLAnchorElement>(`.Post-body a[rel]${linkSelectorExcludes}`).forEach((link) => {
       const normalizedUrl = link.href.replace(/^https?:\/\/(.+?)\/?$/i, '$1');
 
       if (
         (whitelistArray.length && !inList(normalizedUrl, whitelistArray)) ||
         (blacklistArray.length && inList(normalizedUrl, blacklistArray)) ||
-        link.href.replace(/\/$/, '') !== link.textContent.replace(/\/$/, '')
+        link.href.replace(/\/$/, '') !== (link.textContent?.replace(/\/$/, '') ?? '')
       ) {
         return;
       }

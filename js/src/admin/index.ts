@@ -6,6 +6,12 @@ app.initializers.add('datlechin/flarum-link-preview', () => {
   app.extensionData
     .for(PREFIX)
     .registerSetting({
+      setting: `${PREFIX}.enable_batch_requests`,
+      label: app.translator.trans(`${PREFIX}.admin.settings.enable_batch_requests_label`),
+      help: app.translator.trans(`${PREFIX}.admin.settings.enable_batch_requests_help`),
+      type: 'checkbox',
+    })
+    .registerSetting({
       setting: `${PREFIX}.convert_media_urls`,
       label: app.translator.trans(`${PREFIX}.admin.settings.convert_media_urls_label`),
       help: app.translator.trans(`${PREFIX}.admin.settings.convert_media_urls_help`),
