@@ -13,7 +13,7 @@
     "scripts": {
         "dev": "webpack --mode development --watch",
         "build": "webpack --mode production",
-        "analyze": "cross-env ANALYZER=true yarn build",
+        "analyze": "cross-env ANALYZER=true npm run build",
         "format": "prettier --write src",
         "format-check": "prettier --check src"
     }
