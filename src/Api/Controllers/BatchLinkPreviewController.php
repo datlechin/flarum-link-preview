@@ -16,78 +16,119 @@ class BatchLinkPreviewController implements RequestHandlerInterface
 
     public function handle(Request $request): Response
     {
-        $urls = $request->getParsedBody()['urls'] ?? [];
-        $urlsToFetch = [];
+        try {
+            $urls = $request->getParsedBody()['urls'] ?? [];
+            $result = $this->processUrls($urls);
+
+            return new JsonResponse($result);
+        } catch (Throwable $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    protected function processUrls(array $urls): array
+    {
         $result = [];
+        $urlsToFetch = [];
 
         foreach ($urls as $url) {
-            if (!$this->service->isValidUrl($url)) {
-                $result[$url] = $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
-                continue;
+            $processResult = $this->preProcessUrl($url);
+            if (isset($processResult['data'])) {
+                $result[$url] = $processResult['data'];
+            } else if (isset($processResult['fetch'])) {
+                $urlsToFetch[$url] = $processResult['fetch'];
+            } else {
+                $result[$url] = $processResult['error'];
             }
-
-            $normalizedUrl = $this->service->normalizeUrl($url);
-
-            if (!$this->service->isUrlAllowed($normalizedUrl)) {
-                $result[$url] = $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
-                continue;
-            }
-
-            $cachedData = $this->service->getCachedData($normalizedUrl);
-            if ($cachedData) {
-                $result[$url] = $cachedData;
-                continue;
-            }
-
-            $urlsToFetch[$url] = $normalizedUrl;
         }
 
         if (empty($urlsToFetch)) {
-            return new JsonResponse($result);
+            return $result;
         }
 
-        $promises = $this->preparePromises($urlsToFetch);
+        $fetchResults = $this->fetchUrls($urlsToFetch);
 
-        $responses = Utils::settle($promises)->wait();
+        foreach ($urlsToFetch as $originalUrl => $normalizedUrl) {
+            $result[$originalUrl] = $fetchResults[$originalUrl] ?? [
+                'error' => 'Failed to fetch preview'
+            ];
+        }
 
-        foreach ($responses as $originalUrl => $response) {
+        return $result;
+    }
+
+    protected function preProcessUrl(string $url): array
+    {
+        if (!$this->service->isValidUrl($url)) {
+            return [
+                'error' => $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached')
+            ];
+        }
+
+        $normalizedUrl = $this->service->normalizeUrl($url);
+
+        if (!$this->service->isUrlAllowed($normalizedUrl)) {
+            return [
+                'error' => $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached')
+            ];
+        }
+
+        $cachedData = $this->service->getCachedData($normalizedUrl);
+        if ($cachedData) {
+            return ['data' => $cachedData];
+        }
+
+        return ['fetch' => $normalizedUrl];
+    }
+
+    protected function fetchUrls(array $urlsToFetch): array
+    {
+        $promises = [];
+        $results = [];
+
+        foreach ($urlsToFetch as $originalUrl) {
             try {
-                if (!isset($responses[$originalUrl])) {
-                    $result[$originalUrl] = [
-                        'error' => 'No response received',
-                    ];
-                    continue;
-                }
-
-                if ($response['state'] === 'fulfilled') {
-                    $html = $response['value']->getBody()->getContents();
-                    $data = $this->service->parseHtml($html, $originalUrl);
-
-                    $this->service->cacheData($urlsToFetch[$originalUrl], $data);
-                    $result[$originalUrl] = $data;
-                } else {
-                    $result[$originalUrl] = [
-                        'error' => $response['reason']->getMessage(),
-                    ];
-                }
+                $promises[$originalUrl] = $this->service->getClient()->getAsync($originalUrl);
             } catch (Throwable $e) {
-                $result[$originalUrl] = [
-                    'error' => $e->getMessage(),
+                $results[$originalUrl] = [
+                    'error' => 'Failed to create request: ' . $e->getMessage()
                 ];
             }
         }
 
-        return new JsonResponse($result);
-    }
-
-    protected function preparePromises(array $urlsToFetch): array
-    {
-        $promises = [];
-
-        foreach ($urlsToFetch as $originalUrl) {
-            $promises[$originalUrl] = $this->service->getClient()->getAsync($originalUrl);
+        if (empty($promises)) {
+            return $results;
         }
 
-        return $promises;
+        $responses = Utils::settle($promises)->wait();
+
+        foreach ($promises as $originalUrl => $promise) {
+            try {
+                $response = $responses[$originalUrl] ?? null;
+
+                if (!$response || $response['state'] !== 'fulfilled') {
+                    $results[$originalUrl] = [
+                        'error' => $response['reason'] instanceof \Exception ?
+                            $response['reason']->getMessage() :
+                            'Failed to fetch preview'
+                    ];
+                    continue;
+                }
+
+                $html = $response['value']->getBody()->getContents();
+                $data = $this->service->parseHtml($html, $originalUrl);
+
+                $this->service->cacheData($urlsToFetch[$originalUrl], $data);
+                $results[$originalUrl] = $data;
+            } catch (Throwable $e) {
+                $results[$originalUrl] = [
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+
+        return $results;
     }
 }
