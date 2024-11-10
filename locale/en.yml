@@ -1,22 +1,22 @@
 datlechin-link-preview:
   admin:
     settings:
-      enable_batch_requests_label: Enable Batch Requests
-      enable_batch_requests_help: Process multiple link previews in batches to improve performance. Disable to process each link individually.
-      blacklist_label: Blacklist
-      blacklist_help: Enter a comma-separated list of domains or urls to exclude from the link preview.
-      blacklist_placeholder: e.g. facebook.com,https://domain.com/path
-      whitelist_label: Whitelist
-      whitelist_help: Enter a comma-separated list of domains or urls to allow link previewing.
-      whitelist_placeholder: e.g. facebook.com,https://domain.com/path
-      convert_media_urls_label: Convert media URLs
-      convert_media_urls_help: If enabled, this will convert all media URLs to link previews.
-      use_google_favicons_label: Use Google Favicon API
-      use_google_favicons_help: If enabled, will use a Google service in the frontend to request the respective site's favicon.
-      cache_time_label: Cache Time
-      cache_time_help: Number of minutes crawled links will be cached before they are accessed again. Set to 0 to disable link caching. Defaults to 60 minutes if not set.
-      open_links_in_new_tab_label: Open links in new tab
-      open_links_in_new_tab_help: If enabled, links will be opened in a new tab.
+      enable_batch_requests_label: Enable Batch Processing
+      enable_batch_requests_help: Improve performance by processing multiple link previews simultaneously. When disabled, links are processed one at a time.
+      blacklist_label: Domain Blacklist
+      blacklist_help: Specify domains or URLs that should not generate link previews. Use commas to separate multiple entries.
+      blacklist_placeholder: "Examples: facebook.com, twitter.com/specific-page"
+      whitelist_label: Domain Whitelist
+      whitelist_help: Only generate previews for these domains or URLs. Leave empty to allow all non-blacklisted domains.
+      whitelist_placeholder: "Examples: trusted-site.com, specific-domain.org/path"
+      convert_media_urls_label: Preview Media URLs
+      convert_media_urls_help: Generate previews for URLs that point to media files (images, videos, etc.).
+      use_google_favicons_label: Display Site Icons
+      use_google_favicons_help: Show website favicons using Google's Favicon service to enhance visual recognition.
+      cache_time_label: Cache Duration (minutes)
+      cache_time_help: "How long to store link previews before refreshing. Set to 0 to disable caching. Default: 60 minutes."
+      open_links_in_new_tab_label: Open Links in New Tab
+      open_links_in_new_tab_help: Always open previewed links in a new browser tab.
 
   forum:
-    site_cannot_be_reached: This site cannot be reached.
+    site_cannot_be_reached: Unable to load preview. Please check the URL and try again.

@@ -87,10 +87,12 @@ class BatchLinkPreviewController implements RequestHandlerInterface
     {
         $promises = [];
         $results = [];
+        $normalizedUrls = [];
 
-        foreach ($urlsToFetch as $originalUrl) {
+        foreach ($urlsToFetch as $originalUrl => $normalizedUrl) {
             try {
                 $promises[$originalUrl] = $this->service->getClient()->getAsync($originalUrl);
+                $normalizedUrls[$originalUrl] = $normalizedUrl;
             } catch (Throwable $e) {
                 $results[$originalUrl] = [
                     'error' => 'Failed to create request: ' . $e->getMessage(),
@@ -120,7 +122,10 @@ class BatchLinkPreviewController implements RequestHandlerInterface
                 $html = $response['value']->getBody()->getContents();
                 $data = $this->service->parseHtml($html, $originalUrl);
 
-                $this->service->cacheData($urlsToFetch[$originalUrl], $data);
+                if (isset($normalizedUrls[$originalUrl])) {
+                    $this->service->cacheData($normalizedUrls[$originalUrl], $data);
+                }
+
                 $results[$originalUrl] = $data;
             } catch (Throwable $e) {
                 $results[$originalUrl] = [
