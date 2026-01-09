@@ -3,6 +3,7 @@
 namespace Datlechin\LinkPreview\Api\Controllers;
 
 use Datlechin\LinkPreview\Services\LinkPreviewService;
+use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Promise\Utils;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -22,9 +23,9 @@ class BatchLinkPreviewController implements RequestHandlerInterface
 
             return new JsonResponse($result);
         } catch (Throwable $e) {
-            return new JsonResponse([
-                'error' => $e->getMessage(),
-            ]);
+            return new JsonResponse(
+                $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached'),
+            );
         }
     }
 
@@ -94,9 +95,7 @@ class BatchLinkPreviewController implements RequestHandlerInterface
                 $promises[$originalUrl] = $this->service->getClient()->getAsync($originalUrl);
                 $normalizedUrls[$originalUrl] = $normalizedUrl;
             } catch (Throwable $e) {
-                $results[$originalUrl] = [
-                    'error' => 'Failed to create request: ' . $e->getMessage(),
-                ];
+                $results[$originalUrl] = $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
             }
         }
 
@@ -111,11 +110,7 @@ class BatchLinkPreviewController implements RequestHandlerInterface
                 $response = $responses[$originalUrl] ?? null;
 
                 if (!$response || $response['state'] !== 'fulfilled') {
-                    $results[$originalUrl] = [
-                        'error' => $response['reason'] instanceof \Exception ?
-                            $response['reason']->getMessage() :
-                            'Failed to fetch preview',
-                    ];
+                    $results[$originalUrl] = $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
                     continue;
                 }
 
@@ -128,9 +123,7 @@ class BatchLinkPreviewController implements RequestHandlerInterface
 
                 $results[$originalUrl] = $data;
             } catch (Throwable $e) {
-                $results[$originalUrl] = [
-                    'error' => $e->getMessage(),
-                ];
+                $results[$originalUrl] = $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
             }
         }
 
