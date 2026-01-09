@@ -3,6 +3,7 @@
 namespace Datlechin\LinkPreview\Api\Controllers;
 
 use Datlechin\LinkPreview\Services\LinkPreviewService;
+use GuzzleHttp\Exception\RequestException;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -44,10 +45,14 @@ class SingleLinkPreviewController implements RequestHandlerInterface
             $this->service->cacheData($normalizedUrl, $data);
 
             return new JsonResponse($data);
+        } catch (RequestException $e) {
+            return new JsonResponse(
+                $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached'),
+            );
         } catch (Throwable $e) {
-            return new JsonResponse([
-                'error' => $e->getMessage(),
-            ]);
+            return new JsonResponse(
+                $this->service->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached'),
+            );
         }
     }
 }
