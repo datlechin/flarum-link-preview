@@ -1,66 +1,66 @@
 {
-    "name": "datlechin/flarum-link-preview",
-    "description": "Automatically display a rich preview of the link contents.",
-    "keywords": [
-        "flarum",
-        "flarum-extension",
-        "link preview",
-        "preview"
-    ],
-    "type": "flarum-extension",
-    "license": "MIT",
-    "require": {
-        "php": "^8.1",
-        "flarum/core": "^1.8",
-        "spekulatius/phpscraper": "^3.0"
-    },
-    "authors": [
-        {
-            "name": "Ngo Quoc Dat",
-            "email": "datlechin@gmail.com",
-            "role": "Developer"
-        }
-    ],
-    "support": {
-        "source": "https://github.com/datlechin/flarum-link-preview",
-        "forum": "https://discuss.flarum.org/d/30011"
-    },
-    "autoload": {
-        "psr-4": {
-            "Datlechin\\LinkPreview\\": "src/"
-        }
-    },
-    "homepage": "https://ngoquocdat.dev",
-    "extra": {
-        "flarum-extension": {
-            "title": "Link Preview",
-            "category": "feature",
-            "icon": {
-                "name": "fas fa-eye",
-                "color": "#fff",
-                "backgroundColor": "#D3241C"
-            }
-        },
-        "flarum-cli": {
-            "modules": {
-                "admin": true,
-                "forum": true,
-                "js": true,
-                "jsCommon": false,
-                "css": true,
-                "locale": true,
-                "gitConf": true,
-                "githubActions": true,
-                "prettier": true,
-                "typescript": true,
-                "bundlewatch": false,
-                "backendTesting": false,
-                "editorConfig": true,
-                "styleci": true
-            }
-        }
-    },
-    "require-dev": {
-        "laravel/pint": "^1.18"
+  "name": "datlechin/flarum-link-preview",
+  "description": "Automatically display a rich preview of the link contents.",
+  "keywords": [
+    "flarum",
+    "flarum-extension",
+    "link preview",
+    "preview"
+  ],
+  "type": "flarum-extension",
+  "license": "MIT",
+  "require": {
+    "php": "^8.1",
+    "flarum/core": "1.8.12",
+    "spekulatius/phpscraper": "^3.0"
+  },
+  "authors": [
+    {
+      "name": "Ngo Quoc Dat",
+      "email": "datlechin@gmail.com",
+      "role": "Developer"
     }
+  ],
+  "support": {
+    "source": "https://github.com/datlechin/flarum-link-preview",
+    "forum": "https://discuss.flarum.org/d/30011"
+  },
+  "autoload": {
+    "psr-4": {
+      "Datlechin\\LinkPreview\\": "src/"
+    }
+  },
+  "homepage": "https://ngoquocdat.dev",
+  "extra": {
+    "flarum-extension": {
+      "title": "Link Preview",
+      "category": "feature",
+      "icon": {
+        "name": "fas fa-eye",
+        "color": "#fff",
+        "backgroundColor": "#D3241C"
+      }
+    },
+    "flarum-cli": {
+      "modules": {
+        "admin": true,
+        "forum": true,
+        "js": true,
+        "jsCommon": false,
+        "css": true,
+        "locale": true,
+        "gitConf": true,
+        "githubActions": true,
+        "prettier": true,
+        "typescript": true,
+        "bundlewatch": false,
+        "backendTesting": false,
+        "editorConfig": true,
+        "styleci": true
+      }
+    }
+  },
+  "require-dev": {
+    "laravel/pint": "^1.18"
+  }
 }
