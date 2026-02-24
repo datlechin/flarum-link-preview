@@ -7,17 +7,7 @@ use DOMXPath;
 
 class HtmlMetaParser
 {
-    protected array $openGraph = [];
-
-    protected array $twitterCard = [];
-
-    protected ?string $title = null;
-
-    protected ?string $description = null;
-
-    protected ?string $image = null;
-
-    public function parse(string $html): self
+    public function parse(string $html): array
     {
         libxml_use_internal_errors(true);
 
@@ -28,48 +18,40 @@ class HtmlMetaParser
 
         $xpath = new DOMXPath($dom);
 
-        $this->parseTitle($xpath, $dom);
-        $this->parseMeta($xpath);
+        $title = $this->extractTitle($dom);
+        $meta = $this->extractMeta($xpath);
 
-        return $this;
+        return [
+            'title' => $title,
+            'og:title' => $meta['og']['og:title'] ?? null,
+            'og:description' => $meta['og']['og:description'] ?? null,
+            'og:image' => $meta['og']['og:image'] ?? null,
+            'og:site_name' => $meta['og']['og:site_name'] ?? null,
+            'twitter:title' => $meta['tc']['twitter:title'] ?? null,
+            'twitter:description' => $meta['tc']['twitter:description'] ?? null,
+            'twitter:image' => $meta['tc']['twitter:image'] ?? null,
+            'twitter:site' => $meta['tc']['twitter:site'] ?? null,
+            'meta:description' => $meta['description'],
+        ];
     }
 
-    public function getOpenGraph(): array
-    {
-        return $this->openGraph;
-    }
-
-    public function getTwitterCard(): array
-    {
-        return $this->twitterCard;
-    }
-
-    public function getTitle(): ?string
-    {
-        return $this->title;
-    }
-
-    public function getDescription(): ?string
-    {
-        return $this->description;
-    }
-
-    public function getImage(): ?string
-    {
-        return $this->image;
-    }
-
-    protected function parseTitle(DOMXPath $xpath, DOMDocument $dom): void
+    protected function extractTitle(DOMDocument $dom): ?string
     {
         $titleNodes = $dom->getElementsByTagName('title');
 
         if ($titleNodes->length > 0) {
-            $this->title = trim($titleNodes->item(0)->textContent);
+            return trim($titleNodes->item(0)->textContent);
         }
+
+        return null;
     }
 
-    protected function parseMeta(DOMXPath $xpath): void
+    protected function extractMeta(DOMXPath $xpath): array
     {
+        $og = [];
+        $tc = [];
+        $description = null;
+
         $metaNodes = $xpath->query('//meta[@property or @name]');
 
         foreach ($metaNodes as $node) {
@@ -78,25 +60,23 @@ class HtmlMetaParser
             $content = $node->getAttribute('content');
 
             if (str_starts_with($property, 'og:')) {
-                $this->openGraph[$property] = $content;
+                $og[$property] = $content;
             }
 
             if (str_starts_with($name, 'twitter:') || str_starts_with($property, 'twitter:')) {
                 $key = $name ?: $property;
-                $this->twitterCard[$key] = $content;
+                $tc[$key] = $content;
             }
 
             if ($name === 'description') {
-                $this->description = $content;
+                $description = $content;
             }
         }
 
-        // Fallback: image from og:image
-        $this->image = $this->openGraph['og:image'] ?? null;
-
-        // Fallback: description from og:description
-        if ($this->description === null) {
-            $this->description = $this->openGraph['og:description'] ?? null;
-        }
+        return [
+            'og' => $og,
+            'tc' => $tc,
+            'description' => $description,
+        ];
     }
 }

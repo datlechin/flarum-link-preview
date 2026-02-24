@@ -1,10 +1,33 @@
 import app from 'flarum/forum/app';
+import type { LinkPreviewData, LinkPreviewCallback } from '../types';
 
-const linkPreviewCache = new Map<string, any>();
+interface CacheEntry {
+  data: LinkPreviewData;
+  timestamp: number;
+}
+
+const CACHE_TTL = 5 * 60 * 1000;
+const MAX_BATCH_SIZE = 10;
+
+const linkPreviewCache = new Map<string, CacheEntry>();
+
+function getCached(url: string): LinkPreviewData | null {
+  const entry = linkPreviewCache.get(url);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    linkPreviewCache.delete(url);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(url: string, data: LinkPreviewData): void {
+  linkPreviewCache.set(url, { data, timestamp: Date.now() });
+}
 
 class LinkPreviewBatchManager {
-  private queue: Map<string, Function[]>;
-  private timeout: NodeJS.Timeout | null;
+  private queue: Map<string, LinkPreviewCallback[]>;
+  private timeout: ReturnType<typeof setTimeout> | null;
   private processing: boolean;
   private readonly BATCH_DELAY: number;
 
@@ -12,12 +35,10 @@ class LinkPreviewBatchManager {
     this.queue = new Map();
     this.timeout = null;
     this.processing = false;
-    this.BATCH_DELAY = 50; // ms
-
-    this.setupCacheCleanup();
+    this.BATCH_DELAY = 50;
   }
 
-  add(url: string, callback: Function) {
+  add(url: string, callback: LinkPreviewCallback) {
     const enableBatch = app.forum.attribute('datlechin-link-preview.enableBatchRequests');
 
     if (!enableBatch) {
@@ -25,8 +46,9 @@ class LinkPreviewBatchManager {
       return;
     }
 
-    if (linkPreviewCache.has(url)) {
-      callback(linkPreviewCache.get(url));
+    const cached = getCached(url);
+    if (cached) {
+      callback(cached);
       return;
     }
 
@@ -38,41 +60,49 @@ class LinkPreviewBatchManager {
     this.scheduleProcessing();
   }
 
-  scheduleProcessing() {
+  private scheduleProcessing() {
     if (!this.timeout) {
       this.timeout = setTimeout(() => this.process(), this.BATCH_DELAY);
     }
   }
 
-  async fetchSingle(url: string, callback: Function) {
+  private async fetchSingle(url: string, callback: LinkPreviewCallback) {
     try {
-      const response = await app.request({
+      const response = await app.request<LinkPreviewData>({
         url: `${app.forum.attribute('apiUrl')}/datlechin-link-preview`,
         method: 'GET',
         params: { url },
       });
 
+      setCache(url, response);
       callback(response);
-      linkPreviewCache.set(url, response);
-    } catch (error) {
+    } catch {
       callback({ error: 'Failed to fetch preview' });
     }
   }
 
-  async process() {
+  private async process() {
     if (this.processing || this.queue.size === 0) return;
 
     this.processing = true;
     this.timeout = null;
 
-    const urls = Array.from(this.queue.keys());
-    const callbacks = Array.from(this.queue.values());
+    const allUrls = Array.from(this.queue.keys());
+    const allCallbacks = Array.from(this.queue.values());
     this.queue.clear();
+
+    const urls = allUrls.slice(0, MAX_BATCH_SIZE);
+    const callbacks = allCallbacks.slice(0, MAX_BATCH_SIZE);
+
+    // Re-queue overflow
+    for (let i = MAX_BATCH_SIZE; i < allUrls.length; i++) {
+      this.queue.set(allUrls[i], allCallbacks[i]);
+    }
 
     try {
       const response = await this.fetchBatch(urls);
-      this.handleSuccess(response, callbacks);
-    } catch (error) {
+      this.handleSuccess(response, urls, callbacks);
+    } catch {
       this.handleError(callbacks);
     }
 
@@ -83,40 +113,25 @@ class LinkPreviewBatchManager {
     }
   }
 
-  async fetchBatch(urls: string[]): Promise<any> {
-    return await app.request({
+  private async fetchBatch(urls: string[]): Promise<Record<string, LinkPreviewData>> {
+    return await app.request<Record<string, LinkPreviewData>>({
       url: `${app.forum.attribute('apiUrl')}/datlechin-link-preview/batch`,
       method: 'POST',
       body: { urls },
     });
   }
 
-  handleSuccess(response: any, callbacks: Function[][]) {
-    Object.entries(response).forEach(([url, data], index) => {
-      linkPreviewCache.set(url, data);
+  private handleSuccess(response: Record<string, LinkPreviewData>, urls: string[], callbacks: LinkPreviewCallback[][]) {
+    urls.forEach((url, index) => {
+      const data = response[url] ?? { error: 'No preview available' };
+      setCache(url, data);
       callbacks[index].forEach((cb) => cb(data));
     });
   }
 
-  handleError(callbacks: Function[][]) {
-    const errorData = { error: 'Failed to fetch preview' };
+  private handleError(callbacks: LinkPreviewCallback[][]) {
+    const errorData: LinkPreviewData = { error: 'Failed to fetch preview' };
     callbacks.forEach((cbs) => cbs.forEach((cb) => cb(errorData)));
-  }
-
-  setupCacheCleanup() {
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
-        linkPreviewCache.clear();
-      }
-    });
-  }
-
-  clearCache() {
-    linkPreviewCache.clear();
-  }
-
-  getCacheSize(): number {
-    return linkPreviewCache.size;
   }
 }
 

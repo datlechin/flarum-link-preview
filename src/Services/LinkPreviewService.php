@@ -4,12 +4,15 @@ namespace Datlechin\LinkPreview\Services;
 
 use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client;
+use GuzzleHttp\Promise\Utils;
 use Illuminate\Contracts\Cache\Store;
-use Datlechin\LinkPreview\Services\HtmlMetaParser;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Throwable;
 
 class LinkPreviewService
 {
+    const MAX_BATCH_SIZE = 20;
+
     protected array $blacklist = [];
 
     protected array $whitelist = [];
@@ -17,6 +20,10 @@ class LinkPreviewService
     protected int $cacheTime;
 
     protected Client $httpClient;
+
+    protected bool $externalApiFallback;
+
+    protected string $externalApiUrl;
 
     public function __construct(
         protected HtmlMetaParser $parser,
@@ -27,6 +34,148 @@ class LinkPreviewService
         $this->setupCacheTime($settings);
         $this->setupLists($settings);
         $this->setupHttpClient();
+        $this->externalApiFallback = (bool) $settings->get('datlechin-link-preview.external_api_fallback');
+        $this->externalApiUrl = $settings->get('datlechin-link-preview.external_api_url') ?: 'https://open.iframe.ly/api/oembed?origin=flarum';
+    }
+
+    public function getPreview(string $url): array
+    {
+        if (!$this->isValidUrl($url)) {
+            return $this->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
+        }
+
+        $normalizedUrl = $this->normalizeUrl($url);
+
+        if (!$this->isUrlAllowed($normalizedUrl)) {
+            return $this->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
+        }
+
+        $cachedData = $this->getCachedData($normalizedUrl);
+        if ($cachedData && ($this->hasRichData($cachedData) || !$this->externalApiFallback)) {
+            return $cachedData;
+        }
+
+        $data = $this->fetchAndParse($url);
+
+        if (!$data || !$this->hasRichData($data)) {
+            $apiData = $this->fetchFromExternalApi($url);
+            if ($apiData) {
+                $data = $apiData;
+            }
+        }
+
+        if (!$data) {
+            return $this->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
+        }
+
+        $this->cacheData($normalizedUrl, $data);
+
+        return $data;
+    }
+
+    public function getPreviewsBatch(array $urls): array
+    {
+        $urls = array_slice($urls, 0, self::MAX_BATCH_SIZE);
+
+        $result = [];
+        $urlsToFetch = [];
+
+        foreach ($urls as $url) {
+            if (!$this->isValidUrl($url)) {
+                $result[$url] = $this->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
+                continue;
+            }
+
+            $normalizedUrl = $this->normalizeUrl($url);
+
+            if (!$this->isUrlAllowed($normalizedUrl)) {
+                $result[$url] = $this->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
+                continue;
+            }
+
+            $cachedData = $this->getCachedData($normalizedUrl);
+            if ($cachedData && ($this->hasRichData($cachedData) || !$this->externalApiFallback)) {
+                $result[$url] = $cachedData;
+                continue;
+            }
+
+            $urlsToFetch[$url] = $normalizedUrl;
+        }
+
+        if (empty($urlsToFetch)) {
+            return $result;
+        }
+
+        $promises = [];
+
+        foreach ($urlsToFetch as $originalUrl => $normalizedUrl) {
+            try {
+                $promises[$originalUrl] = $this->httpClient->getAsync($originalUrl);
+            } catch (Throwable $e) {
+                $result[$originalUrl] = $this->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
+                unset($urlsToFetch[$originalUrl]);
+            }
+        }
+
+        if (!empty($promises)) {
+            $responses = Utils::settle($promises)->wait();
+
+            foreach ($promises as $originalUrl => $promise) {
+                try {
+                    $data = null;
+                    $response = $responses[$originalUrl] ?? null;
+
+                    if ($response && $response['state'] === 'fulfilled') {
+                        $html = $response['value']->getBody()->getContents();
+
+                        if (!empty($html)) {
+                            $data = $this->parseHtml($html, $originalUrl);
+
+                            if (!$this->hasUsefulData($data)) {
+                                $data = null;
+                            }
+                        }
+                    }
+
+                    if (!$data || !$this->hasRichData($data)) {
+                        $apiData = $this->fetchFromExternalApi($originalUrl);
+                        if ($apiData) {
+                            $data = $apiData;
+                        }
+                    }
+
+                    if (!$data) {
+                        $result[$originalUrl] = $this->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
+                        continue;
+                    }
+
+                    $this->cacheData($urlsToFetch[$originalUrl], $data);
+                    $result[$originalUrl] = $data;
+                } catch (Throwable $e) {
+                    $result[$originalUrl] = $this->getErrorResponse('datlechin-link-preview.forum.site_cannot_be_reached');
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    private function fetchAndParse(string $url): ?array
+    {
+        try {
+            $response = $this->httpClient->get($url);
+            $html = $response->getBody()->getContents();
+
+            if (empty($html)) {
+                return null;
+            }
+
+            $data = $this->parseHtml($html, $url);
+
+            return $this->hasUsefulData($data) ? $data : null;
+        } catch (Throwable $e) {
+            return null;
+        }
     }
 
     protected function setupCacheTime(SettingsRepositoryInterface $settings): void
@@ -47,6 +196,7 @@ class LinkPreviewService
             'timeout' => 15,
             'connect_timeout' => 10,
             'verify' => false,
+            'http_errors' => false,
             'allow_redirects' => [
                 'max' => 10,
                 'strict' => false,
@@ -71,22 +221,15 @@ class LinkPreviewService
         ]);
     }
 
-    public function getClient(): Client
-    {
-        return $this->httpClient;
-    }
-
     public function parseHtml(string $html, string $url): array
     {
         $parsed = $this->parser->parse($html);
-        $og = $parsed->getOpenGraph();
-        $tc = $parsed->getTwitterCard();
 
         return [
-            'site_name' => $og['og:site_name'] ?? $tc['twitter:site'] ?? null,
-            'title' => $parsed->getTitle() ?? $og['og:title'] ?? $tc['twitter:title'] ?? null,
-            'description' => $parsed->getDescription() ?? $og['og:description'] ?? $tc['twitter:description'] ?? null,
-            'image' => $parsed->getImage() ?? $og['og:image'] ?? $tc['twitter:image'] ?? null,
+            'site_name' => $parsed['og:site_name'] ?? $parsed['twitter:site'] ?? null,
+            'title' => $parsed['og:title'] ?? $parsed['twitter:title'] ?? $parsed['title'] ?? null,
+            'description' => $parsed['og:description'] ?? $parsed['twitter:description'] ?? $parsed['meta:description'] ?? null,
+            'image' => $parsed['og:image'] ?? $parsed['twitter:image'] ?? null,
             'accessed' => time(),
         ];
     }
@@ -131,6 +274,59 @@ class LinkPreviewService
             return;
         }
         $this->cache->put($this->getCacheKey($normalizedUrl), $data, $this->cacheTime * 60);
+    }
+
+    public function hasUsefulData(array $data): bool
+    {
+        return !empty($data['title']) || !empty($data['description']) || !empty($data['image']);
+    }
+
+    public function hasRichData(array $data): bool
+    {
+        return !empty($data['description']) || !empty($data['image']);
+    }
+
+    public function fetchFromExternalApi(string $url): ?array
+    {
+        if (!$this->externalApiFallback) {
+            return null;
+        }
+
+        try {
+            $separator = str_contains($this->externalApiUrl, '?') ? '&' : '?';
+            $apiUrl = $this->externalApiUrl . $separator . 'url=' . urlencode($url);
+
+            $response = $this->httpClient->get($apiUrl, [
+                'headers' => [
+                    'Accept' => 'application/json',
+                ],
+                'timeout' => 10,
+            ]);
+
+            $body = $response->getBody()->getContents();
+
+            if (empty($body)) {
+                return null;
+            }
+
+            $json = json_decode($body, true);
+
+            if (!is_array($json) || (!isset($json['title']) && !isset($json['description']))) {
+                return null;
+            }
+
+            $data = [
+                'site_name' => $json['provider_name'] ?? null,
+                'title' => $json['title'] ?? null,
+                'description' => $json['description'] ?? null,
+                'image' => $json['thumbnail_url'] ?? null,
+                'accessed' => time(),
+            ];
+
+            return $this->hasUsefulData($data) ? $data : null;
+        } catch (Throwable $e) {
+            return null;
+        }
     }
 
     public function getErrorResponse(string $message): array
