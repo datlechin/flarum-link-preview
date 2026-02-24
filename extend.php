@@ -37,6 +37,8 @@ return [
         ->default('datlechin-link-preview.convert_media_urls', false)
         ->default('datlechin-link-preview.cache_time', 60)
         ->default('datlechin-link-preview.open_links_in_new_tab', true)
+        ->default('datlechin-link-preview.external_api_fallback', false)
+        ->default('datlechin-link-preview.external_api_url', '')
         ->serializeToForum('datlechin-link-preview.enableBatchRequests', 'datlechin-link-preview.enable_batch_requests', 'boolval')
         ->serializeToForum('datlechin-link-preview.blacklist', key: 'datlechin-link-preview.blacklist')
         ->serializeToForum('datlechin-link-preview.whitelist', 'datlechin-link-preview.whitelist')

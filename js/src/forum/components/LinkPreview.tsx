@@ -3,20 +3,13 @@ import Icon from 'flarum/common/components/Icon';
 import classList from 'flarum/common/utils/classList';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import batchManager from '../utils/batch-manager';
+import type { LinkPreviewData } from '../types';
 import type Mithril from 'mithril';
 
 interface LinkPreviewAttrs {
   link: HTMLAnchorElement;
   openLinksInNewTab: boolean;
   useGoogleFavicons: boolean;
-}
-
-interface LinkPreviewData {
-  title?: string;
-  description?: string;
-  site_name?: string;
-  image?: string;
-  error?: string;
 }
 
 export default class LinkPreview extends Component<LinkPreviewAttrs> {
@@ -26,6 +19,7 @@ export default class LinkPreview extends Component<LinkPreviewAttrs> {
   linkClasses!: string;
   data!: LinkPreviewData | null;
   useGoogleFavicons!: boolean;
+  imageError!: boolean;
 
   oninit(vnode: Mithril.Vnode<LinkPreviewAttrs, this>) {
     super.oninit(vnode);
@@ -34,55 +28,98 @@ export default class LinkPreview extends Component<LinkPreviewAttrs> {
 
     this.loading = true;
     this.link = attrs.link;
-    this.link.classList.add('LinkPreview-captured');
     this.linkAttributes = Object.assign({}, ...Array.from(this.link.attributes, ({ name, value }) => ({ [name]: value })));
-    this.linkClasses = this.linkAttributes.class || '';
+    this.linkClasses = (this.linkAttributes.class || '').replace(/\bLinkPreview-captured\b/g, '').trim();
     this.linkAttributes.target = attrs.openLinksInNewTab ? '_blank' : '_self';
     delete this.linkAttributes.class;
+    delete this.linkAttributes.style;
     this.data = null;
     this.useGoogleFavicons = attrs.useGoogleFavicons;
+    this.imageError = false;
 
     this.fetchData();
   }
 
   view() {
-    const classes = {
-      loading: this.loading,
-    };
+    if (this.loading) {
+      return this.viewLoading();
+    }
 
+    if (this.data?.error) {
+      return this.viewError();
+    }
+
+    return this.viewLoaded();
+  }
+
+  viewLoading() {
     return (
-      <div className={classList('LinkPreview', classes)}>
-        {this.loading || this.getImage() ? (
-          <div className="LinkPreview-image">
-            {this.loading ? (
-              <LoadingIndicator display="unset" containerClassName={classList('LinkPreview-loading', this.loading && 'active')} size="small" />
-            ) : (
-              <img src={this.getImage()} data-link-preview />
-            )}
-          </div>
-        ) : null}
+      <div className={classList('LinkPreview', 'LinkPreview--loading')}>
+        <div className="LinkPreview-image">
+          <LoadingIndicator display="unset" size="small" />
+        </div>
         <div className="LinkPreview-main">
-          <div className="LinkPreview-title">{this.getLink(this.data?.title ?? this.data?.error)}</div>
-          <div className="LinkPreview-description">{this.loading ? '' : (this.data?.description ?? '')}</div>
+          <div className="LinkPreview-title">{this.getLink(this.getDomain())}</div>
           <div className="LinkPreview-domain">
-            {this.useGoogleFavicons ? <img src={this.getFavicon()} data-link-preview /> : <Icon name="fas fa-external-link-alt" />}
-            {this.getLink(this.data?.site_name)}
+            {this.useGoogleFavicons ? <img src={this.getFavicon()} alt="" /> : <Icon name="fas fa-external-link-alt" />}
+            {this.getLink(this.getDomain())}
           </div>
         </div>
       </div>
     );
   }
 
-  oncreate(vnode: Mithril.VnodeDOM<LinkPreviewAttrs, this>) {
-    if (this.link.parentNode) {
-      this.link.parentNode.insertBefore(vnode.dom, this.link);
-    }
+  viewError() {
+    return (
+      <div className={classList('LinkPreview', 'LinkPreview--error')}>
+        <div className="LinkPreview-main">
+          <div className="LinkPreview-title">{this.getLink(this.getDomain())}</div>
+          <div className="LinkPreview-description LinkPreview-description--error">{this.data!.error}</div>
+          <div className="LinkPreview-domain">
+            {this.useGoogleFavicons ? <img src={this.getFavicon()} alt="" /> : <Icon name="fas fa-external-link-alt" />}
+            {this.getLink(this.getDomain())}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  viewLoaded() {
+    const image = this.getImage();
+    const showImage = image && !this.imageError;
+    const description = this.data?.description;
+
+    return (
+      <div className={classList('LinkPreview', 'LinkPreview--loaded')}>
+        {showImage ? (
+          <div className="LinkPreview-image">
+            <img
+              src={image}
+              alt=""
+              loading="lazy"
+              onError={() => {
+                this.imageError = true;
+                m.redraw();
+              }}
+            />
+          </div>
+        ) : null}
+        <div className="LinkPreview-main">
+          <div className="LinkPreview-title">{this.getLink(this.data?.title ?? this.getDomain())}</div>
+          {description ? <div className="LinkPreview-description">{description}</div> : null}
+          <div className="LinkPreview-domain">
+            {this.useGoogleFavicons ? <img src={this.getFavicon()} alt="" /> : <Icon name="fas fa-external-link-alt" />}
+            {this.getLink(this.data?.site_name ?? this.getDomain())}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   getLink(text?: string) {
     return (
       <a {...this.linkAttributes} className={classList('LinkPreview-link', this.linkClasses)}>
-        {this.loading ? this.getDomain() : (text ?? this.getDomain())}
+        {text ?? this.getDomain()}
       </a>
     );
   }
@@ -96,7 +133,7 @@ export default class LinkPreview extends Component<LinkPreviewAttrs> {
   }
 
   getImage() {
-    return this.data?.image || this.getFavicon();
+    return this.data?.image || null;
   }
 
   getFavicon() {
@@ -105,14 +142,9 @@ export default class LinkPreview extends Component<LinkPreviewAttrs> {
 
   fetchData() {
     batchManager.add(this.getHref(), (data: LinkPreviewData) => {
-      this.setData(data);
+      this.data = data;
       this.loading = false;
       m.redraw();
     });
-  }
-
-  setData(data: LinkPreviewData) {
-    this.data = data;
-    m.redraw();
   }
 }

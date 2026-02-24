@@ -1,5 +1,14 @@
 datlechin-link-preview:
   admin:
+    sections:
+      general_label: General
+      general_description: Basic display preferences for link previews.
+      performance_label: Performance
+      performance_description: Optimize how link previews are fetched and cached.
+      url_filtering_label: URL Filtering
+      url_filtering_description: Control which URLs generate link previews.
+      external_api_label: External API Fallback
+      external_api_description: Use an external service when direct fetching fails (e.g., bot-protected sites).
     settings:
       enable_batch_requests_label: Enable Batch Processing
       enable_batch_requests_help: Improve performance by processing multiple link previews simultaneously. When disabled, links are processed one at a time.
@@ -17,6 +26,10 @@ datlechin-link-preview:
       cache_time_help: "How long to store link previews before refreshing. Set to 0 to disable caching. Default: 60 minutes."
       open_links_in_new_tab_label: Open Links in New Tab
       open_links_in_new_tab_help: Always open previewed links in a new browser tab.
+      external_api_fallback_label: External API Fallback
+      external_api_fallback_help: When direct fetching fails (e.g. bot-protected sites like Reuters), use an external oEmbed API to retrieve link metadata.
+      external_api_url_label: External API URL
+      external_api_url_help: "Custom oEmbed API endpoint. Leave empty to use the default (Iframely open API). The URL will be appended as a query parameter."
 
   forum:
     site_cannot_be_reached: Unable to load preview. Please check the URL and try again.
