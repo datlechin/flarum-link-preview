@@ -5,7 +5,7 @@ namespace Datlechin\LinkPreview\Services;
 use Flarum\Settings\SettingsRepositoryInterface;
 use GuzzleHttp\Client;
 use Illuminate\Contracts\Cache\Store;
-use Spekulatius\PHPScraper\PHPScraper;
+use Datlechin\LinkPreview\Services\HtmlMetaParser;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class LinkPreviewService
@@ -19,7 +19,7 @@ class LinkPreviewService
     protected Client $httpClient;
 
     public function __construct(
-        protected PHPScraper $web,
+        protected HtmlMetaParser $parser,
         protected TranslatorInterface $translator,
         SettingsRepositoryInterface $settings,
         protected Store $cache,
@@ -78,14 +78,15 @@ class LinkPreviewService
 
     public function parseHtml(string $html, string $url): array
     {
-        $web = clone $this->web;
-        $web->setContent($url, $html);
+        $parsed = $this->parser->parse($html);
+        $og = $parsed->getOpenGraph();
+        $tc = $parsed->getTwitterCard();
 
         return [
-            'site_name' => $web->openGraph['og:site_name'] ?? $web->twitterCard['twitter:site'] ?? null,
-            'title' => $web->title ?? $web->openGraph['og:title'] ?? $web->twitterCard['twitter:title'] ?? null,
-            'description' => $web->description ?? $web->openGraph['og:description'] ?? $web->twitterCard['twitter:description'] ?? null,
-            'image' => $web->image ?? $web->openGraph['og:image'] ?? $web->twitterCard['twitter:image'] ?? null,
+            'site_name' => $og['og:site_name'] ?? $tc['twitter:site'] ?? null,
+            'title' => $parsed->getTitle() ?? $og['og:title'] ?? $tc['twitter:title'] ?? null,
+            'description' => $parsed->getDescription() ?? $og['og:description'] ?? $tc['twitter:description'] ?? null,
+            'image' => $parsed->getImage() ?? $og['og:image'] ?? $tc['twitter:image'] ?? null,
             'accessed' => time(),
         ];
     }

@@ -120,4 +120,5 @@ class LinkPreviewBatchManager {
   }
 }
 
-export default new LinkPreviewBatchManager();
+const batchManager = new LinkPreviewBatchManager();
+export default batchManager;

@@ -1,5 +1,5 @@
 import Component from 'flarum/common/Component';
-import icon from 'flarum/common/helpers/icon';
+import Icon from 'flarum/common/components/Icon';
 import classList from 'flarum/common/utils/classList';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import batchManager from '../utils/batch-manager';
@@ -65,7 +65,7 @@ export default class LinkPreview extends Component<LinkPreviewAttrs> {
           <div className="LinkPreview-title">{this.getLink(this.data?.title ?? this.data?.error)}</div>
           <div className="LinkPreview-description">{this.loading ? '' : (this.data?.description ?? '')}</div>
           <div className="LinkPreview-domain">
-            {this.useGoogleFavicons ? <img src={this.getFavicon()} data-link-preview /> : icon('fas fa-external-link-alt')}
+            {this.useGoogleFavicons ? <img src={this.getFavicon()} data-link-preview /> : <Icon name="fas fa-external-link-alt" />}
             {this.getLink(this.data?.site_name)}
           </div>
         </div>
