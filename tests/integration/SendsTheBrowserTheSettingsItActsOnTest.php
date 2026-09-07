@@ -17,11 +17,10 @@ use PHPUnit\Framework\Attributes\Test;
 /**
  * The settings the browser is handed, in the form it acts on them in.
  *
- * Some of these are decisions the frontend makes on its own before it asks the
- * server anything: a blocked host is dropped without a request, a post stops
- * collecting links at the cap. So a row that reaches the browser meaning
- * something other than what the server reads it as is a forum where the two
- * halves disagree and neither is wrong on its own terms.
+ * Some of these are decisions the frontend makes before it asks the server
+ * anything: a blocked host is dropped without a request, a post stops
+ * collecting links at the cap. A row that reaches the browser meaning
+ * something other than what the server reads leaves the two halves disagreeing.
  */
 class SendsTheBrowserTheSettingsItActsOnTest extends TestCase
 {
@@ -37,10 +36,9 @@ class SendsTheBrowserTheSettingsItActsOnTest extends TestCase
     #[Test]
     public function a_cap_of_zero_reaches_the_browser_as_the_one_the_server_enforces(): void
     {
-        // Sent raw, this turned every preview in the forum off: the browser
-        // read 0 as a cap of nothing and collected no links, while the server
-        // went on clamping the same row to one. An administrator who typed a
-        // zero got a broken extension rather than a small number of cards.
+        // The browser reads 0 as a cap of nothing and collects no links, while
+        // the server clamps the same row to one. Sent raw, a typed zero turns
+        // every preview in the forum off.
         $this->setting(self::PREFIX.'max_previews_per_post', '0');
 
         $this->assertSame(1, $this->attribute('maxPreviewsPerPost'));

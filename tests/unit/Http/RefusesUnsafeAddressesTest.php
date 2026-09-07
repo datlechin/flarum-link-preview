@@ -21,10 +21,9 @@ use PHPUnit\Framework\Attributes\Test;
 /**
  * The security boundary of the extension, exercised without a network.
  *
- * Any URL a member types is a URL the server can be made to request, so the
- * address behind the hostname is checked before the socket is opened rather
- * than the hostname being trusted. Every case here is one the real resolver
- * cannot be asked to produce, which is exactly why the resolver is a seam.
+ * Any URL a member types is one the server can be made to request, so the
+ * address behind the hostname is checked before the socket is opened. The
+ * resolver is a seam because the real one cannot be asked for these answers.
  */
 class RefusesUnsafeAddressesTest extends TestCase
 {
@@ -51,16 +50,11 @@ class RefusesUnsafeAddressesTest extends TestCase
     }
 
     /**
-     * The ranges PHP's own reserved and private flags cover, and the ones they
-     * do not.
-     *
-     * `FILTER_FLAG_NO_RES_RANGE` knows about loopback, link local, this
-     * network and the future-use block; `FILTER_FLAG_NO_PRIV_RANGE` knows
-     * about RFC1918 and `fc00::/7`. Neither has heard of carrier grade NAT,
-     * the protocol assignments block, the benchmarking block or IPv6 site
-     * local, and every one of those is routed inside somebody's network. They
-     * are listed here alongside the ones PHP handles so that a rewrite of the
-     * check cannot quietly drop half of them.
+     * The ranges PHP's reserved and private flags cover, and the ones they do
+     * not: neither flag has heard of carrier grade NAT, protocol assignments,
+     * benchmarking or IPv6 site local, and all four are routed inside
+     * somebody's network. Listed together so a rewrite of the check cannot
+     * quietly drop half of them.
      *
      * @return array<string, array{string}>
      */
@@ -79,8 +73,7 @@ class RefusesUnsafeAddressesTest extends TestCase
             'anything else in this network' => ['0.1.2.3'],
             'IPv6 unique local' => ['fc00::1'],
 
-            // The loopback address the operating system will happily connect
-            // to, wearing the notation that gets it past a check written for
+            // Loopback in the notation that gets past a check written for
             // dotted quads.
             'the IPv4 loopback written as an IPv6 address' => ['::ffff:127.0.0.1'],
 
@@ -90,8 +83,7 @@ class RefusesUnsafeAddressesTest extends TestCase
             'the far end of carrier grade NAT' => ['100.127.255.254'],
 
             // 192.0.0.0/24 is IETF protocol assignments and 198.18.0.0/15 is
-            // the benchmarking block, both routed on plenty of internal
-            // networks and neither of them anybody's web site.
+            // benchmarking, both routed on internal networks.
             'protocol assignments' => ['192.0.0.1'],
             'the far end of protocol assignments' => ['192.0.0.255'],
             'benchmarking' => ['198.18.0.1'],
@@ -127,10 +119,8 @@ class RefusesUnsafeAddressesTest extends TestCase
     #[DataProvider('portsThePublicWebIsNotServedOn')]
     public function a_port_that_is_not_the_default_for_the_scheme_is_refused(string $url): void
     {
-        // The address check says which machines the forum may talk to. This
-        // says which door: a public host is still a way to knock on every
-        // service its operator runs, and a link preview has no business
-        // anywhere but the web port.
+        // A public host is still a way to knock on every service its operator
+        // runs, and a link preview has no business off the web port.
         $fetcher = $this->fetcher([$this->page()]);
 
         $this->expectException(UnsafeUrlException::class);
@@ -161,8 +151,7 @@ class RefusesUnsafeAddressesTest extends TestCase
     #[Test]
     public function the_two_ports_a_real_site_is_sometimes_served_on_are_allowed(): void
     {
-        // A rule nobody can satisfy is a rule administrators route around, and
-        // 8080 and 8443 are ordinary enough that refusing them would cost more
+        // Ordinary enough on real sites that refusing them would cost more
         // than it saves.
         $this->assertInstanceOf(FetchResult::class, $this->fetcher([$this->page()])->fetch('http://example.com:8080/a'));
         $this->assertInstanceOf(FetchResult::class, $this->fetcher([$this->page()])->fetch('https://example.com:8443/a'));
@@ -188,9 +177,6 @@ class RefusesUnsafeAddressesTest extends TestCase
     #[Test]
     public function the_default_port_written_out_in_full_is_still_the_default(): void
     {
-        // `https://example.com:443/` is the same address as
-        // `https://example.com/`, and a site that writes it out is not doing
-        // anything a reader should be shown an error for.
         $this->assertInstanceOf(FetchResult::class, $this->fetcher([$this->page()])->fetch('https://example.com:443/a'));
         $this->assertInstanceOf(FetchResult::class, $this->fetcher([$this->page()])->fetch('http://example.com:80/a'));
     }
@@ -279,9 +265,9 @@ class RefusesUnsafeAddressesTest extends TestCase
     #[Test]
     public function a_redirect_into_the_network_is_not_followed(): void
     {
-        // Guzzle would revalidate nothing on a redirect, so every hop is
-        // checked the same way the first one was. The queued page proves the
-        // second request was never made.
+        // Guzzle revalidates nothing on a redirect, so every hop is checked
+        // the way the first one was. The queued page proves the second
+        // request was never made.
         $fetcher = $this->fetcher(
             [
                 new Response(302, ['Location' => 'http://169.254.169.254/latest/meta-data/']),

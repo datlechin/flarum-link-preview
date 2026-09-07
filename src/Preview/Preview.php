@@ -16,9 +16,9 @@ use Datlechin\LinkPreview\Html\Metadata;
 /**
  * One card's worth of data, on its way to the browser.
  *
- * The three named constructors are the only shapes a response body can take,
- * so there is nowhere for a half-filled preview to come from: a card either
- * describes a page, describes a discussion, or says why neither happened.
+ * The three named constructors are the only shapes a response body can take, so
+ * a half-filled preview has nowhere to come from: a card either describes a
+ * page, describes a discussion, or says why neither happened.
  */
 final class Preview
 {
@@ -30,7 +30,7 @@ final class Preview
 
     /**
      * @param  array{url: string, width: int|null, height: int|null}|null  $image
-     * @param  array{id: int, commentCount: int, participantCount: int, author: string|null, createdAt: string, tags: list<array{name: string}>}|null  $discussion
+     * @param  array{id: int, commentCount: int, author: string|null, createdAt: string, tags: list<array{name: string}>}|null  $discussion
      */
     private function __construct(
         private readonly string $url,
@@ -66,7 +66,7 @@ final class Preview
     }
 
     /**
-     * @param  array{id: int, commentCount: int, participantCount: int, author: string|null, createdAt: string, tags: list<array{name: string}>}  $discussion
+     * @param  array{id: int, commentCount: int, author: string|null, createdAt: string, tags: list<array{name: string}>}  $discussion
      */
     public static function discussion(string $url, string $title, ?string $description, ?string $siteName, ?string $favicon, array $discussion): self
     {
@@ -94,9 +94,9 @@ final class Preview
      * What is safe to hand back to the page that asked.
      *
      * An error card puts this address on screen and links to it, so a `data:`
-     * or `javascript:` URL that was just rejected for its scheme must not come
-     * back out of the endpoint wearing a link. Anything that is not plain http
-     * or https becomes nothing at all, and the card renders without a link.
+     * or `javascript:` URL rejected for its scheme must not come back out of
+     * the endpoint wearing a link. Anything but http or https becomes empty,
+     * and the card renders without a link.
      */
     private static function echoable(string $url): string
     {
@@ -105,10 +105,6 @@ final class Preview
         return is_string($scheme) && in_array(strtolower($scheme), ['http', 'https'], true) ? $url : '';
     }
 
-    public function isError(): bool
-    {
-        return $this->error !== null;
-    }
 
     /**
      * @return array<string, mixed>

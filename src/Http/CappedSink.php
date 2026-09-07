@@ -19,16 +19,11 @@ use Psr\Http\Message\StreamInterface;
  * A body buffer that stops taking bytes once it has enough of them.
  *
  * Without ext-curl there is no progress callback to abort a transfer with, so
- * Guzzle's stream handler copies the whole response into the sink before the
- * promise resolves and a link in a post names how much memory that is. The
- * copy runs through `GuzzleHttp\Psr7\Utils::copyToStream()`, which gives up as
- * soon as a write is refused and then closes the source, so refusing is what
- * bounds the read and drops the connection.
- *
- * What is lost against the cURL path is precision and speed, not the bound:
- * the copy only notices a full sink after the buffer it is holding, so up to
- * one 8KB read past the cap crosses the wire, and the transfer runs to that
- * point rather than being cut at the byte.
+ * `Utils::copyToStream()` copies the whole response into the sink before the
+ * promise resolves. It gives up as soon as a write is refused and then closes
+ * the source, so refusing is what bounds the read. The bound is loose: the copy
+ * notices a full sink only after the buffer it holds, so up to one 8KB read
+ * past the cap crosses the wire.
  */
 final class CappedSink implements StreamInterface
 {

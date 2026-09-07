@@ -10,7 +10,6 @@ export interface PreviewImage {
 export interface DiscussionInfo {
   id: number;
   commentCount: number;
-  participantCount: number;
   author: string | null;
   createdAt: string;
   tags: Array<{ name: string }>;

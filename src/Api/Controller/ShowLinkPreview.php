@@ -20,23 +20,17 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * A preview of one link, for a reader who is looking at a post that contains it.
+ * A preview of one link, for a reader looking at a post that contains it.
  *
- * A plain PSR-15 handler rather than an `Extend\ApiResource`: there is no model
- * behind this and no id to address, so a JSON:API resource would have to invent
- * both. What comes back is a computed document about a remote page.
+ * A POST for what is plainly a read: a GET is reachable from any page on the
+ * web with nothing more than an `<img src>`, so every visitor to an attacker's
+ * page would become an outbound connection from this forum to an address of
+ * the attacker's choosing, at their rate. A POST carrying a JSON body needs a
+ * preflight this forum does not answer cross site.
  *
- * A POST for what is plainly a read, which is the one surprise here. A GET is
- * reachable from any page on the web with nothing more than an `<img src>`, so
- * every visitor to an attacker's page would become an outbound connection from
- * this forum to an address of the attacker's choosing, at their rate rather
- * than at ours. A POST carrying a JSON body needs a preflight that this forum
- * does not answer cross site, which closes that off.
- *
- * No permission check. Anyone who can read the post can read the link in it,
- * and the preview says no more than the page it points at already tells any
- * visitor. What keeps the endpoint from being an open proxy is elsewhere: the
- * address checks in SafeFetcher, the throttler and the cache.
+ * No permission check. The preview says no more than the page already tells
+ * any visitor; SafeFetcher's address checks, the throttler and the cache are
+ * what keep the endpoint from being an open proxy.
  */
 final class ShowLinkPreview implements RequestHandlerInterface
 {
@@ -50,8 +44,8 @@ final class ShowLinkPreview implements RequestHandlerInterface
         $url = is_array($body) ? ($body['url'] ?? null) : null;
 
         // A malformed request is the caller's mistake and gets a 400. A URL
-        // that simply cannot be previewed is not: that is an ordinary answer
-        // carrying an error code, and it is cacheable.
+        // that simply cannot be previewed is not: that comes back as an
+        // ordinary, cacheable answer carrying an error code.
         if (! is_string($url)) {
             throw new InvalidParameterException('url must be a string');
         }

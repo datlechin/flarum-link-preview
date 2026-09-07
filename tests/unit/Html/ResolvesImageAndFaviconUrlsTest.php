@@ -19,10 +19,10 @@ use PHPUnit\Framework\Attributes\Test;
 /**
  * Every URL that leaves the extractor is absolute and points at the web.
  *
- * Half of what pages put in `og:image` is a relative path, and a card that
- * hands the browser `/img/card.png` renders as a broken image against the
- * forum's own origin. The other half of the problem is schemes: `data:` and
- * `javascript:` are dropped here rather than shipped for the frontend to hide.
+ * Pages routinely put a relative path in `og:image`, and a card handing the
+ * browser `/img/card.png` renders broken against the forum's own origin.
+ * `data:` and `javascript:` are dropped here rather than shipped for the
+ * frontend to hide.
  */
 class ResolvesImageAndFaviconUrlsTest extends TestCase
 {

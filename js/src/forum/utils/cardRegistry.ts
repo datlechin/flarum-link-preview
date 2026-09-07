@@ -5,23 +5,13 @@ import { releasePreview, retainPreview } from './previewStore';
 /**
  * Every card on the page, and the undoing of it.
  *
- * A card is a Mithril root of its own, mounted into a wrapper inside post HTML
- * that Mithril does not otherwise own. Two things make cleaning up after that
- * more work than it looks:
- *
- * `m.mount` adds the target to an internal subscription list and nothing ever
- * takes it off again, because Mithril has no reason to check `isConnected`. A
- * root that has been thrown away therefore goes on being redrawn on every
- * redraw of the page, for as long as the tab is open.
- *
- * And a post is thrown away wholesale far more often than it looks: core's
- * `Comment` renders its body with `m.trust(contentHtml)`, which Mithril diffs
- * by comparing the two strings, so one edited character replaces the entire
- * `.Post-body` subtree and orphans everything mounted inside it.
- *
- * Hence three defences rather than one: the sweep for orphans, the removal hook
- * for a post leaving the page, and `m.mount(wrapper, null)` in both, which is
- * the only call that actually cancels the subscription.
+ * A card is a Mithril root mounted into post HTML Mithril does not own.
+ * `m.mount` subscribes the target and never unsubscribes it, so a discarded
+ * root is redrawn for the life of the tab, and one edited character replaces
+ * the whole `.Post-body` subtree, core rendering it from `m.trust(contentHtml)`
+ * which Mithril diffs by string compare. Hence three defences: the sweep, the
+ * removal hook, and `m.mount(wrapper, null)` in both, the only call that
+ * actually cancels the subscription.
  */
 
 /** What has to be put back if the card is taken away again. */
@@ -35,27 +25,23 @@ const mounted = new Map<HTMLElement, Card>();
 export function mountCard(target: PreviewTarget): void {
   const { link, url, internal, block, mode } = target;
 
-  // Marked before anything else, so a redraw that lands mid-mount cannot
-  // collect this anchor a second time. `collectPreviewTargets` skips an anchor
-  // carrying this attribute, which is what keeps the pass idempotent across the
-  // `onupdate` hook it also runs from.
+  // Marked first, so a redraw landing mid-mount cannot collect this anchor
+  // again. `collectPreviewTargets` skips anchors carrying the attribute, which
+  // is what keeps the pass idempotent across `onupdate`.
   link.setAttribute('data-link-preview', '');
 
   const wrapper = document.createElement('span');
 
-  // A `<span>` because the wrapper often ends up inside a `<p>`, where a `<div>`
-  // is invalid nesting and the browser closes the paragraph around it. The
-  // stylesheet gives it `display: block`.
+  // A `<span>` because the wrapper often lands inside a `<p>`, where a `<div>`
+  // makes the browser close the paragraph. The stylesheet gives it `display: block`.
   wrapper.className = 'LinkPreview-container';
   wrapper.setAttribute('data-link-preview', '');
 
   // Always inside a block of the post, never a sibling of a top level child of
-  // `.Post-body`. Mithril renders the body from `m.trust(contentHtml)` and
-  // remembers how many top level nodes that produced; on the next change it
-  // removes exactly that many. One extra node there and it removes the wrong
-  // ones, leaving a mounted root still connected to a detached subtree that the
-  // `isConnected` sweep can never see. `collectPreviewTargets` drops any link
-  // that has no such block, so there is nothing to check for here.
+  // `.Post-body`: Mithril removes exactly as many top level nodes as
+  // `m.trust(contentHtml)` produced, so one extra there and it removes the
+  // wrong ones, stranding a mounted root in a detached subtree the
+  // `isConnected` sweep can never see.
   if (mode === 'replace') {
     link.classList.add('LinkPreview-source');
     link.before(wrapper);
@@ -65,36 +51,25 @@ export function mountCard(target: PreviewTarget): void {
 
   mounted.set(wrapper, { link, url });
 
-  // Held for as long as the card is on screen, so the store cannot evict the
-  // answer this card is drawn from and strand it in a skeleton. The URL is the
-  // resolved destination, which is what the card asks the store for as well.
+  // Held while the card is on screen so the store cannot evict the answer it is
+  // drawn from and strand it in a skeleton.
   retainPreview(url);
 
   m.mount(wrapper, { view: () => m(LinkPreviewCard, { link, url, internal }) });
 }
 
-/**
- * Unmount the cards whose post is no longer on the page.
- */
 export function sweepDetachedCards(): void {
   for (const wrapper of Array.from(mounted.keys())) {
     if (!wrapper.isConnected) unmount(wrapper);
   }
 }
 
-/**
- * Unmount the cards inside a post that is being removed, while its DOM is still
- * attached and can be searched.
- */
+/** Called while the post's DOM is still attached, so the wrappers can be found. */
 export function unmountCardsWithin(root: ParentNode): void {
   root.querySelectorAll<HTMLElement>('.LinkPreview-container').forEach(unmount);
 }
 
-/**
- * Take the cards back out of a post and give it its plain links back, for a
- * reader who has just turned previews off and should not have to reload the
- * page to see that happen.
- */
+/** Restores the plain links, so turning previews off does not need a reload. */
 export function removeCardsWithin(root: ParentNode): void {
   root.querySelectorAll<HTMLElement>('.LinkPreview-container').forEach((wrapper) => {
     const card = mounted.get(wrapper);

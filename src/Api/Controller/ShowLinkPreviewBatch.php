@@ -24,10 +24,8 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * Every preview one page needs, in one request.
  *
- * A post with five links would otherwise open five connections from the
- * browser and five rounds of fetching on the server. Asking together lets
- * SafeFetcher run them concurrently, and lets the throttler count a page view
- * as the one request it really is.
+ * Asking together lets SafeFetcher run the fetches concurrently, and lets the
+ * throttler count a page view as the one request it really is.
  */
 final class ShowLinkPreviewBatch implements RequestHandlerInterface
 {

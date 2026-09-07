@@ -14,26 +14,10 @@ namespace Datlechin\LinkPreview\Preview;
 /**
  * Decides whether an address is one the forum is willing to fetch.
  *
- * The rules an administrator writes are host rules, so they are matched
- * against the host. The version this replaces built a regular expression from
- * each entry and ran it unanchored over the whole URL, which meant `com`
- * blocked every site on the internet and `evil.com` also blocked
- * `notevil.com.example.org`. Both are the same bug: a rule that was meant to
- * name a site was being asked whether it appeared anywhere in a string.
- *
- * Here an entry names a host, optionally followed by a path prefix, and both
- * ends are anchored. A `*` still stands in for a run of characters, but inside
- * the host it cannot cross a dot, so `*.example.com` covers the subdomains of
- * one site rather than every site whose address happens to contain it.
- *
- * The host comes from `parse_url()` rather than from everything up to the
- * first slash, because the two are not the same string: `x@example.com` and
- * `example.com:8443` and `example.com.` all reach the site an administrator
- * blocked by writing `example.com`, and the old reading let all three through.
- *
- * Nothing in here touches the network or the container: the same list must
- * give the same answer for the same URL every time, or the cached preview and
- * the filter disagree.
+ * An entry names a host, optionally a path prefix, anchored at both ends; a `*`
+ * cannot cross a dot inside the host, so `*.example.com` covers one site's
+ * subdomains, not every address that contains it. No network and no container:
+ * one list must always give one answer, or filter and cached preview disagree.
  */
 final class UrlFilter
 {
@@ -85,9 +69,8 @@ final class UrlFilter
         $bare = $rule['path'] === '';
 
         // A bare host covers itself and everything under it, so blocking
-        // `example.com` does not leave `cdn.example.com` fetchable. A path is
-        // only written for the host it names, so a rule carrying one is not
-        // the same shorthand and stops at that host.
+        // `example.com` does not leave `cdn.example.com` fetchable. A rule
+        // carrying a path is not that shorthand and stops at the host it names.
         $host = ($bare ? '(?:.+\.)?' : '').self::hostPattern($rule['host']);
 
         if (! preg_match('~^'.$host.'$~', $target['host'])) {
@@ -114,13 +97,10 @@ final class UrlFilter
     }
 
     /**
-     * Reduce an address and a rule to the same vocabulary.
-     *
-     * An administrator writes `https://www.example.com/` and means the same
-     * thing as `example.com`, and a reader's link says whichever of the two
-     * the site they copied it from prefers. The browser side normalises to
-     * these same rules, so a link it drops without asking is a link this would
-     * have refused anyway.
+     * Reduce an address and a rule to the same vocabulary, so that
+     * `https://www.example.com/` and `example.com` compare equal. The browser
+     * side normalises by these same rules, so a link it drops without asking is
+     * one this would have refused anyway.
      *
      * @return array{host: string, path: string}
      */

@@ -14,21 +14,19 @@ namespace Datlechin\LinkPreview\Settings;
 use Flarum\Settings\SettingsRepositoryInterface;
 
 /**
- * The settings the server side actually reads, in the types it needs them in.
+ * The settings the server side reads, in the types it needs them in.
  *
  * `SettingsRepositoryInterface::get()` answers `mixed`, and a setting saved
  * through the admin page arrives as a string whatever the extender declared.
- * Every read is funnelled through here so that a `'0'` or an empty row means
- * the same thing everywhere rather than in whichever way the calling site
- * happened to cast it.
+ * Every read is funnelled through here so a `'0'` or an empty row means the
+ * same thing everywhere rather than however the calling site cast it.
  */
 final class Config
 {
     /**
-     * How many URLs one batch request may carry.
-     *
-     * Mirrored by the frontend queue, which chunks to the same number so a
-     * page full of links never sends a request the server would truncate.
+     * How many URLs one batch request may carry. Mirrored by the frontend
+     * queue, which chunks to the same number so a page full of links never
+     * sends a request the server would truncate.
      */
     public const MAX_BATCH_SIZE = 20;
 
@@ -38,9 +36,8 @@ final class Config
      * What a forum that has never opened the settings page runs on.
      *
      * `extend.php` declares its defaults from this array and every read below
-     * falls back to it, so the two cannot disagree about what a missing row
-     * means. Keyed by the full setting key, which is the form the extender and
-     * the settings repository both speak.
+     * falls back to it, so the two cannot disagree about a missing row. Keyed
+     * by the full setting key, the form extender and repository both speak.
      *
      * @var array<string, mixed>
      */
@@ -57,11 +54,9 @@ final class Config
     ];
 
     /**
-     * The longest a failure is remembered for.
-     *
-     * A dead domain costs a full connect timeout per reader per page view
-     * without negative caching, but a site that was down for a minute should
-     * not stay blank for an hour, so failures expire well before successes.
+     * The longest a failure is remembered for. Without negative caching a dead
+     * domain costs a connect timeout per reader per page view, but a site that
+     * was down for a minute should not stay blank for an hour.
      */
     private const MAX_NEGATIVE_CACHE_SECONDS = 600;
 
@@ -117,11 +112,9 @@ final class Config
     }
 
     /**
-     * At least one, whatever the row says.
-     *
-     * An administrator who clears the field or types a zero has asked for a
-     * smaller number of previews, not for a forum where no link ever gets one,
-     * and the browser reads this same number out of the forum payload.
+     * At least one, whatever the row says: an administrator who clears the
+     * field or types a zero asked for fewer previews, not for a forum where no
+     * link gets one. The browser reads this same number from the forum payload.
      */
     public static function previewLimit(mixed $value): int
     {
@@ -145,9 +138,8 @@ final class Config
     }
 
     /**
-     * A missing row falls back to the declared default rather than to false,
-     * so a forum that has never opened the settings page gets the behaviour
-     * the extension advertises.
+     * A missing row falls back to the declared default rather than to false, so
+     * a forum that never opened the settings page gets the advertised behaviour.
      */
     private function boolean(string $key): bool
     {

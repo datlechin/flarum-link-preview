@@ -34,10 +34,10 @@ trait PreviewsLinks
     /**
      * A POST carrying JSON, not a GET carrying a query string.
      *
-     * A GET is reachable from any other site: an `<img src>` on a page a member
-     * happens to visit turns that member's browser into an instruction for this
-     * forum to open a connection somewhere. A JSON body needs a preflight the
-     * forum does not answer cross site, so the same attempt never arrives.
+     * A GET is reachable from any other site: an `<img src>` on a page a
+     * member visits would turn their browser into an instruction for this
+     * forum to open a connection. A JSON body needs a preflight the forum
+     * does not answer cross site.
      *
      * @param  array<string, mixed>  $options
      */

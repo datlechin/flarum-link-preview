@@ -17,12 +17,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
- * An administrator's list names sites, so it is matched against sites.
- *
- * The version this replaces built a regular expression out of each entry and
- * ran it unanchored over the whole URL, so an entry appearing anywhere in the
- * address counted as a match. Both ends are anchored now, and a `*` inside the
- * host cannot cross a dot.
+ * An administrator's list names sites, so it is matched against sites: every
+ * entry is anchored at both ends, and a `*` in the host cannot cross a dot.
  */
 class MatchesTheAllowAndBlockListsTest extends TestCase
 {
@@ -83,9 +79,6 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[Test]
     public function an_entry_no_longer_matches_wherever_it_appears_in_the_url(): void
     {
-        // The bug that made `com` unusable: the old filter matched the entry
-        // anywhere in the string, so it blocked every address that happened to
-        // contain those three letters.
         $filter = new UrlFilter([], ['com']);
 
         $this->assertTrue($filter->allows('https://welcome.test/page'));
@@ -96,18 +89,15 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[Test]
     public function a_bare_entry_is_still_read_as_a_host(): void
     {
-        // Every `.com` address is a subdomain of `com`, so under the host rule
-        // an entry of `com` covers all of them. This is what the code does, and
-        // it disagrees with the contract's claim that `com` no longer blocks
-        // `example.com`: a single label is a legal host and is treated as one.
+        // A single label is a legal host, so `com` covers every `.com` address
+        // under the subdomain rule. This contradicts the contract's claim that
+        // `com` no longer blocks `example.com`; the code here is the truth.
         $this->assertFalse((new UrlFilter([], ['com']))->allows('https://example.com/x'));
     }
 
     #[Test]
     public function a_name_ending_in_the_entry_is_not_a_subdomain_of_it(): void
     {
-        // The other half of the same old bug: `evil.com` also blocked
-        // `notevil.com.example.org`, which belongs to somebody else entirely.
         $filter = new UrlFilter([], ['evil.com']);
 
         $this->assertTrue($filter->allows('https://notevil.com.example.org/a'));
@@ -120,10 +110,8 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[DataProvider('otherWaysToWriteTheSameHost')]
     public function the_host_is_read_from_the_address_rather_than_from_the_text(string $url): void
     {
-        // The version this replaces took everything up to the first slash and
-        // called it the host, so `x@example.com`, `example.com:8443` and
-        // `example.com.` were three strings that were not `example.com` and
-        // three ways past a list by typing. All of them reach the same site.
+        // Userinfo, a port and a trailing dot all reach the same site, so a
+        // filter that string-matched the text would be walked past by typing.
         $this->assertFalse((new UrlFilter([], ['example.com']))->allows($url));
     }
 
@@ -158,9 +146,8 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[Test]
     public function a_username_that_names_a_blocked_host_does_not_block_the_address(): void
     {
-        // The mirror of the case above. `https://tracker.test@example.com/`
-        // goes to example.com and has nothing to do with tracker.test, so a
-        // filter that read the userinfo as a host would refuse the wrong site.
+        // This address goes to example.com, so a filter reading the userinfo
+        // as a host would refuse the wrong site.
         $this->assertTrue((new UrlFilter([], ['tracker.test']))->allows('https://tracker.test@example.com/a'));
     }
 
@@ -182,9 +169,8 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[Test]
     public function a_path_entry_is_matched_against_the_path_and_nothing_after_it(): void
     {
-        // A query string is where somebody else's address ends up, and a
-        // fragment never reaches the server at all, so neither is part of what
-        // a rule names.
+        // A query string is where somebody else's address ends up and a
+        // fragment never reaches the server, so neither is part of a rule.
         $filter = new UrlFilter([], ['example.com/blog']);
 
         $this->assertFalse($filter->allows('https://example.com/blog#introduction'));

@@ -1,18 +1,11 @@
-// A link preview card, built out of what Flarum already has.
-//
-// Core ships no card of this kind, so the block is ours. None of its values
-// are: the colours are core's custom properties, the chrome is the one core
-// gives a raised surface, the type is the scale `DiscussionListItem` reads at,
-// the loading state is core's own placeholder, and the focus ring is core's
-// mixin. Nothing here invents a second design language beside Flarum's.
+// A link preview card. The colours, chrome, type scale, loading placeholder
+// and focus ring are all core's; only the block is ours.
 
-// The anchor the card stands in for. Hidden rather than removed, so a reader
-// who turns previews off gets the plain link back without reloading the page.
+// The anchor the card stands in for, hidden rather than removed so that
+// turning previews off restores the plain link without a reload.
 //
-// Qualified, because `replace` mode is exactly the case where the anchor is
-// core's `.UrlLink--discussion`, whose `display: inline-flex` is the same
-// specificity. Left bare this would win only on the order the two stylesheets
-// happen to be concatenated in.
+// Qualified to beat core's `.UrlLink--discussion`, which in `replace` mode is
+// this same anchor and whose `display: inline-flex` is the same specificity.
 .Post-body .LinkPreview-source {
   display: none;
 }
@@ -22,14 +15,11 @@
 .LinkPreview-container {
   display: block;
   max-width: 100%;
-  // What `.Post-body` gives a paragraph, a list or a blockquote, so a card sits
-  // in the run of a post at the same rhythm as the text around it.
+  // What `.Post-body` gives a paragraph, a list or a blockquote.
   margin: 1em 0;
 }
 
-// `blockquote` is core's own embedded block inside a post: the control surface,
-// the shared radius, and 8px 15px of padding. A card is the same kind of thing,
-// so it is the same box.
+// The box core gives a `blockquote` inside a post.
 .LinkPreview {
   display: flex;
   max-width: 100%;
@@ -41,20 +31,11 @@
 
   .add-keyboard-focus-ring();
 
-  // Core never raises a shadow on hover. Every `box-shadow` it writes belongs
-  // to something that floats over the page from the start, or stands in for a
-  // focus ring on an input. A card is neither.
-  //
-  // What core does with a surface already sitting on `--control-bg` is shade it,
-  // in `HeaderList` and in `Table`. And the nearest thing core has to this card,
-  // `UrlLink--discussion`, is a link drawn as a control-bg box inside a post
-  // body: on hover it underlines its label and takes the link colour. Both,
-  // together, are the whole gesture.
   &:hover,
   &:focus {
     background: var(--control-bg-shaded);
-    // `a` is `.text-link()`, which underlines the whole anchor on hover. The
-    // label below carries the underline instead.
+    // `a` is `.text-link()`, which would underline the whole anchor; the title
+    // below carries the underline instead.
     text-decoration: none;
 
     .LinkPreview-title {
@@ -64,10 +45,8 @@
   }
 }
 
-// `.Post-body a` underlines links in running text and bolds them, at a
-// specificity of (0,1,1). Matched here at (0,2,0) so the card opts out without
-// `!important`, which is how `core/less/common/UrlLink.less` does it for core's
-// own discussion label.
+// `.Post-body a` underlines and bolds links in running text at (0,1,1).
+// Matched here at (0,2,0) so the card opts out without `!important`.
 .Post-body .LinkPreview {
   border-bottom: 0;
   font-weight: normal;
@@ -95,10 +74,8 @@
   aspect-ratio: 2 / 1;
 }
 
-// The measurements core cannot supply. It has avatars, badges and pills, but
-// nothing that stands a remote thumbnail beside two lines of text, and it uses
-// `aspect-ratio` nowhere at all. So the 2:1 frame above and the 72px square
-// here are both chosen, and both are sized to the text they sit against.
+// Sized to the two lines of text it stands beside; core has no thumbnail of
+// this kind to take a measurement from.
 .LinkPreview--compact .LinkPreview-media {
   width: 72px;
   height: 72px;
@@ -126,13 +103,10 @@
   padding: 8px 15px;
 }
 
-// `DiscussionListItem-info` does this same job in core, and reads at this same
-// size and colour.
-//
-// Qualified for the margin's sake. `DiscussionListItem-info` zeroes it from a
-// bare class because it never appears inside a post, while `.Post-body ul` sets
-// `margin-bottom: 1em` at (0,1,1) and would out-specify a bare class here,
-// leaving the row floating a line above the title.
+// `DiscussionListItem-info` does this same job in core, at this size and
+// colour. Qualified for the margin: `.Post-body ul` sets `margin-bottom: 1em`
+// at (0,1,1) and would out-specify a bare class, floating the row a line above
+// the title.
 .LinkPreview .LinkPreview-info {
   list-style-type: none;
   padding: 0;
@@ -148,16 +122,14 @@
     margin-left: 8px;
   }
 
-  // `.username` carries no styling of its own in core; every container that
-  // uses it states this, `DiscussionListItem-info` included.
+  // `.username` carries no styling of its own in core.
   .username {
     font-weight: bold;
   }
 }
 
 .LinkPreview-site {
-  // Holds the icon and the host together on one line, without letting a long
-  // host push the rest of the list out of the card.
+  // One line, without letting a long host push the rest of the list out.
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -177,9 +149,8 @@
   white-space: nowrap;
 }
 
-// `DiscussionListItem-title` is the same thing in core's list: the heading
-// colour and the tighter leading. Clamped rather than ellipsised, because a
-// card has room for a second line where a list row does not.
+// `DiscussionListItem-title`, clamped to two lines rather than ellipsised
+// because a card has the room a list row does not.
 .LinkPreview-title {
   margin: 3px 0 0;
   line-height: 1.3;
@@ -192,9 +163,8 @@
 }
 
 // `DiscussionListItem-info .item-excerpt`, to the value. The colour is stated
-// rather than inherited: core's excerpt is a child of the info list and takes
-// the muted colour from it, while this one is the list's sibling and would
-// otherwise read at full strength.
+// rather than inherited: core's excerpt is a child of the info list, this one
+// is its sibling and would otherwise read at full strength.
 .LinkPreview-excerpt {
   color: var(--muted-more-color);
   margin-top: 4px;
@@ -207,16 +177,12 @@
   overflow: hidden;
 }
 
-// Core's placeholder for content that has not arrived yet: the same bars
-// `LoadingPost` is made of, under the same animation, both defined in
-// `forum/PostStream.less`. Reusing them rather than drawing a second kind of
-// skeleton is the whole point.
+// `.fakeText` and `blink` are core's, from `forum/PostStream.less`.
 .LinkPreview--loading {
   animation: blink 1s linear infinite;
 
-  // Core paints `.fakeText` in `--control-bg` because it only ever puts one on
-  // the page background. On a card already painted `--control-bg` the bars
-  // vanish, so they take the shade core uses when one control sits on another.
+  // Core paints `.fakeText` in `--control-bg`, which vanishes on a card
+  // already painted that, so the bars take the shade instead.
   .fakeText {
     background: var(--control-bg-shaded);
     margin-bottom: 0;
@@ -227,8 +193,7 @@
     }
   }
 
-  // A placeholder is not a thing to press yet, so it does not answer to the
-  // pointer the way a finished card does.
+  // A placeholder is not a thing to press yet.
   &:hover,
   &:focus {
     background: var(--control-bg);
@@ -239,10 +204,8 @@
   color: var(--muted-color);
 }
 
-// A card that failed, and one whose page gave no title, both render the site
-// line and no title, so the gesture above has nothing to land on and the card
-// answers the pointer with a shade and nothing else. `:has` is core's own
-// (`PostStream.less:5`), and this is the one place the fallback is needed.
+// With no title, the hover rule above has nothing to land on, so the site name
+// takes the underline instead.
 .LinkPreview:not(:has(.LinkPreview-title)) {
   &:hover,
   &:focus {
@@ -253,8 +216,8 @@
   }
 }
 
-// `object-fit` and `border-radius` mean nothing on the `<i>` core's `Icon`
-// renders when a site offers no favicon; only the sizing applies to both.
+// Qualified because the fallback is the `<i>` core's `Icon` renders, where
+// `object-fit` and `border-radius` mean nothing.
 img.LinkPreview-favicon {
   object-fit: contain;
   border-radius: 2px;

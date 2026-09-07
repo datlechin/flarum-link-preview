@@ -21,17 +21,12 @@ use PHPUnit\Framework\Attributes\Test;
 /**
  * The extension as an administrator installs it, with nothing bound by hand.
  *
- * Nothing here uses {@see FakeWeb}. Every other test in the suite replaces the
- * resolver and the HTTP client so that no request leaves the machine, which
- * also means every other test would pass against an extension that never binds
- * a real resolver at all. `SafeFetcher` asks for the `Resolver` interface, and
- * an interface nobody bound is not instantiable: without the binding the
- * container throws while building the controller, and every request to either
- * endpoint dies before it reaches a line of this extension's own code.
- *
- * So the container is asked directly as well as through the routes. A test that
- * only sent requests would report the same 500 for a missing binding as for any
- * other fault behind the handler.
+ * Nothing here uses {@see FakeWeb}, because a suite that replaces the resolver
+ * everywhere would pass against an extension that never binds a real one.
+ * `SafeFetcher` asks for the `Resolver` interface, and an interface nobody
+ * bound is not instantiable, so the container is asked directly as well as
+ * through the routes: a request-only test reports the same 500 for a missing
+ * binding as for anything else behind the handler.
  */
 class WiresItselfUpTest extends TestCase
 {

@@ -28,10 +28,9 @@ use Psr\Http\Message\StreamInterface;
 /**
  * What the fetcher agrees to hand back, and how much of it it reads.
  *
- * The status code is the important half. The version this replaced sent
- * `http_errors => false` and then parsed whatever came back, so a Cloudflare
- * challenge page was cached and shown as a real preview titled "Just a
- * moment...", which is the reported half of issue #39.
+ * The status code is the important half: a Cloudflare challenge arrives as a
+ * 403 carrying a perfectly parseable title, so a fetcher that parses whatever
+ * comes back caches a preview reading "Just a moment...".
  */
 class ReadsOnlyTheHeadOfAPageTest extends TestCase
 {
@@ -76,10 +75,9 @@ class ReadsOnlyTheHeadOfAPageTest extends TestCase
     #[DataProvider('statusesThatAreNotAPage')]
     public function only_a_two_hundred_carries_a_page(int $status): void
     {
-        // The base class, because what this asserts is that nothing was handed
-        // back to be parsed. Which subclass a status arrives as is what decides
-        // between `unreachable` and `http_error` on the card, and that is
-        // pinned where a reader would see it, in the integration suite.
+        // The base class, because all this asserts is that nothing was handed
+        // back to be parsed. Which subclass decides between `unreachable` and
+        // `http_error` on the card is pinned in the integration suite.
         $fetcher = $this->fetcher([new Response($status, ['Content-Type' => 'text/html'], self::HTML)]);
 
         $this->expectException(LinkPreviewException::class);
@@ -202,10 +200,9 @@ class ReadsOnlyTheHeadOfAPageTest extends TestCase
     #[Test]
     public function the_cap_on_one_body_is_a_mebibyte(): void
     {
-        // Written out because it is a decision rather than an implementation
-        // detail: twenty of these can be in flight for one batch request, so
-        // the number is also the ceiling on what one reader's page view can
-        // make the forum hold in memory at once.
+        // Twenty of these can be in flight for one batch request, so the
+        // number is also the ceiling on what a single page view can make the
+        // forum hold in memory at once.
         $this->assertSame(1048576, SafeFetcher::MAX_BYTES);
     }
 
@@ -220,8 +217,8 @@ class ReadsOnlyTheHeadOfAPageTest extends TestCase
 
         $this->assertSame(SafeFetcher::MAX_BYTES, strlen($result->body));
 
-        // The rest of the response was never pulled off the wire, which is the
-        // point: the cap is a memory bound, not a substr.
+        // The rest was never pulled off the wire: the cap is a memory bound,
+        // not a substr.
         $this->assertSame(SafeFetcher::MAX_BYTES, $stream->tell());
         $this->assertFalse($stream->eof());
     }

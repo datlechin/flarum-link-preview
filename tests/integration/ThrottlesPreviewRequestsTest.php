@@ -24,10 +24,9 @@ use Psr\Http\Message\ResponseInterface;
  * anything a person produces. Reaching it means asking for addresses nobody has
  * asked for before, which is what using a forum as a port scanner looks like.
  *
- * The second test is the one that matters most. A throttler is handed every API
- * request, and one that answered for routes it knows nothing about would either
- * throttle the whole forum or, by returning false, exempt it from everybody
- * else's limits.
+ * A throttler is handed every API request, so one that answers for routes it
+ * knows nothing about would either throttle the whole forum or, by returning
+ * false, exempt it from everybody else's limits.
  */
 class ThrottlesPreviewRequestsTest extends TestCase
 {

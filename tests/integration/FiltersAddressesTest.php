@@ -52,11 +52,9 @@ class FiltersAddressesTest extends TestCase
         $this->assertSame('invalid_url', $this->data($response)['error']);
         $this->assertSame([], $this->web->requested);
 
-        // The address does not come back. An error card puts what it was given
-        // on screen and links to it, so anything that is not plain http or
-        // https is answered with an empty string rather than handed to the
-        // page to render. The client keys its cards by the address it asked
-        // with and does not need this field to find them.
+        // An error card puts what it was given on screen and links to it, so
+        // anything that is not plain http or https comes back empty. The
+        // client keys its cards by the address it asked with, not by this.
         $this->assertSame('', $this->data($response)['url']);
     }
 
@@ -141,9 +139,8 @@ class FiltersAddressesTest extends TestCase
     #[DataProvider('otherWaysToWriteTheSameHost')]
     public function a_blocked_host_is_blocked_however_the_address_spells_it(string $url): void
     {
-        // A rule names a site, and these all reach the site it named. The
-        // version this replaces compared everything up to the first slash, so
-        // any of them was a way past the list by typing.
+        // A rule names a site and all of these reach the site it named, so a
+        // filter comparing text up to the first slash is walked past by typing.
         $this->setting('datlechin-link-preview.blocklist', 'tracker.test');
         $this->web->host('tracker.test', self::PUBLIC_ADDRESS)
             ->page($url, self::article());
@@ -184,8 +181,7 @@ class FiltersAddressesTest extends TestCase
 
         // The blocked page was there to be fetched and the first hop was
         // answered, so this is the filter stopping the second one. Discarding
-        // the answer afterwards is not the same thing: the tracker has already
-        // been told which forum, and which reader, and when.
+        // the answer afterwards would still have told the tracker who and when.
         $this->assertSame(
             ['https://hop.test/go'],
             $this->web->requested,

@@ -14,10 +14,9 @@ namespace Datlechin\LinkPreview\Preview;
 /**
  * Why a preview could not be produced.
  *
- * A code rather than a sentence, because the reader's language is decided in
- * the reader's browser. The old version translated on the server and cached
- * the result, so whoever loaded a broken link first chose the wording for
- * everybody else on the forum.
+ * A code rather than a sentence: the wording is chosen in the reader's browser,
+ * and a failure cached with a translation already in it would hand every later
+ * reader the first reader's language.
  */
 enum PreviewError: string
 {

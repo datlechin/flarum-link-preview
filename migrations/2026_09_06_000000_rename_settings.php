@@ -14,17 +14,9 @@ use Illuminate\Database\Schema\Builder;
 /**
  * Four settings changed name and two were withdrawn.
  *
- * `blacklist` and `whitelist` are gone for the reason everybody drops them;
- * `use_google_favicons` and `convert_media_urls` are renamed because neither
- * name said what the code did with them.
- *
- * The external API fallback is withdrawn rather than renamed. It sent every URL
- * a member posted to a third party the administrator configured once and forgot,
- * and there is nowhere honest to put that value now.
- *
- * Written as data rather than as a key rename in place because the new keys have
- * defaults registered in extend.php: a forum that never touched the old settings
- * has no rows at all, and this has to be a no-op there.
+ * The external API fallback is withdrawn rather than renamed: it sent every URL
+ * a member posted to a third party the administrator configured once and
+ * forgot, and there is nowhere honest to put that value now.
  */
 $renames = [
     'use_google_favicons' => 'google_favicon_fallback',
@@ -70,7 +62,7 @@ return [
             ->delete();
     },
 
-    // The four renames reverse. The external API rows do not: their values were
+    // The renames reverse. The external API rows do not: their values were
     // deleted above and nothing here could invent them back.
     'down' => function (Builder $schema) use ($renames): void {
         $connection = $schema->getConnection();

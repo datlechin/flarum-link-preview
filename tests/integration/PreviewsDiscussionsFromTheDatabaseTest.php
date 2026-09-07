@@ -102,7 +102,6 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
 
         $this->assertSame(1, $data['discussion']['id']);
         $this->assertSame(4, $data['discussion']['commentCount']);
-        $this->assertSame(3, $data['discussion']['participantCount']);
         $this->assertSame('normal', $data['discussion']['author']);
         $this->assertSame([], $data['discussion']['tags'], 'the tags extension is not enabled here');
     }
@@ -159,10 +158,9 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
     #[Test]
     public function an_internal_address_is_refused_outright_when_the_setting_is_off(): void
     {
-        // The browser is expected to have skipped the link without asking, so
-        // this is the answer for a page still running an older bundle. It is
-        // still a refusal rather than a fetch: a forum reading its own pages
-        // over the network is the one request that can wait on itself.
+        // The answer for a page still running an older bundle, which asks
+        // instead of skipping. Still a refusal rather than a fetch: a forum
+        // reading its own pages is the one request that can wait on itself.
         $this->setting('datlechin-link-preview.preview_internal_links', 0);
 
         $response = $this->preview('http://localhost/d/1-ways-to-season-a-cast-iron-pan');

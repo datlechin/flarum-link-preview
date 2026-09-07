@@ -19,25 +19,13 @@ use PHPUnit\Framework\Attributes\Test;
 /**
  * A link that cannot be fetched is an answer, not an accident.
  *
- * Everything the fetcher refuses to hand back arrives as a
- * `LinkPreviewException`, and the previewer catches it and turns it into an
- * error preview. It caught nothing for a while: the import named
- * `Datlechin\LinkPreview\Http\LinkPreviewException`, one namespace above where
- * those classes actually live, and PHP resolves a catch clause against a class
- * that does not exist by simply never matching it. Every fetch that failed
- * left the endpoint as a 500 with a stack trace instead of a card saying the
- * site could not be reached, and the tests that only ever fetched pages that
- * were there never noticed.
+ * Every failure path is asked for on both endpoints with the status asserted,
+ * because a catch clause naming a class that does not exist silently never
+ * matches and a suite that only fetches pages that are there never notices.
  *
- * So every way a fetch can fail is asked for here, on both endpoints, and the
- * status code is asserted every time. The error code matters less than the
- * fact that something answered at all.
- *
- * The one distinction the codes do carry is between a host that never answered
- * and one that answered with something other than a page: `unreachable` is DNS
- * failing, a connection refused and a timeout, `http_error` is every status
- * that is not 200. Collapsing the two told a reader a plainly working site
- * could not be reached.
+ * `unreachable` is DNS failing, a refusal or a timeout; `http_error` is any
+ * status that is not 200. Collapsing them tells a reader a working site is
+ * down.
  */
 class TurnsAFailedFetchIntoAnErrorPreviewTest extends TestCase
 {
@@ -87,11 +75,9 @@ class TurnsAFailedFetchIntoAnErrorPreviewTest extends TestCase
     #[DataProvider('statusesThatAreNotAPage')]
     public function a_host_that_answered_with_the_wrong_status_is_not_unreachable(int $status): void
     {
-        // The Cloudflare case: a challenge page with a title on it, which the
-        // version before this one cached and showed as a real preview. The
-        // host answered, so `unreachable` was the wrong thing to tell a reader
-        // about it. A 404 on a site that is plainly up reads as the extension
-        // being broken, and the two are worth different words on the card.
+        // A challenge page carries a title, so a fetcher that parses it caches
+        // a preview reading "Just a moment...". The host did answer, and a 404
+        // on a site that is plainly up reads as the extension being broken.
         $this->web->host('guarded.test', self::PUBLIC_ADDRESS)
             ->page('https://guarded.test/a', '<html><head><title>Just a moment...</title></head></html>', 'text/html', $status);
 
@@ -150,9 +136,9 @@ class TurnsAFailedFetchIntoAnErrorPreviewTest extends TestCase
     #[Test]
     public function an_address_inside_the_network_answers_rather_than_throwing(): void
     {
-        // The plainest case of the same bug, and the one a reader hits by
-        // pasting a link to a router: nothing is fetched, an exception is
-        // raised before the socket, and the reader still gets a card.
+        // Raised before the socket rather than by the fetch, so this is the
+        // path most easily left uncaught. A reader who pasted a link to a
+        // router still gets a card.
         $response = $this->preview('http://192.168.1.1/setup');
 
         $this->assertSame(200, $response->getStatusCode());

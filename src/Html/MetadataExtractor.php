@@ -23,11 +23,9 @@ use ValueError;
 /**
  * Turns a page's markup into a {@see Metadata}.
  *
- * Takes the HTML as a string and the URL it was fetched from, so the whole
- * class is testable against a fixture with no network anywhere near it. The
- * base URL is not decoration: half of what pages put in `og:image` is a
- * relative path, and resolving it is the difference between a card and a
- * broken image.
+ * Takes the HTML as a string and the URL it came from: no network, so it tests
+ * against a fixture, and the relative paths pages put in `og:image` resolve
+ * against that base.
  */
 final class MetadataExtractor
 {
@@ -37,17 +35,14 @@ final class MetadataExtractor
 
     /**
      * How far into the document a charset declaration is still believed.
-     *
-     * Browsers stop looking after roughly a kilobyte of head; a declaration
-     * further down than this has already been overtaken by the bytes it was
-     * supposed to describe.
+     * Browsers stop looking after roughly a kilobyte of head.
      */
     private const CHARSET_SNIFF_BYTES = 2048;
 
     /**
-     * JSON-LD nests, and a `@graph` inside a `@graph` inside a list is already
-     * further than any real page goes. The bound is here so a hand-written or
-     * hostile document cannot turn one script tag into unbounded recursion.
+     * A `@graph` inside a `@graph` inside a list is already further than any
+     * real page goes. The bound keeps a hostile document from turning one
+     * script tag into unbounded recursion.
      */
     private const MAX_JSON_LD_DEPTH = 4;
 
@@ -104,11 +99,9 @@ final class MetadataExtractor
     }
 
     /**
-     * The page's own bytes, re-read as UTF-8.
-     *
      * A Shift_JIS or ISO-8859-1 page handed straight to the parser comes back
-     * as mojibake, and mojibake is worse than no preview: it gets cached and
-     * shown as if it were the site's own words.
+     * as mojibake, which is worse than no preview: it gets cached and shown as
+     * if it were the site's own words.
      */
     private function toUtf8(string $html, ?string $contentType): string
     {
@@ -118,7 +111,7 @@ final class MetadataExtractor
             $converted = mb_convert_encoding($html, 'UTF-8', $charset);
         } catch (ValueError) {
             // A charset nobody has heard of says nothing about the bytes, so
-            // fall through to the UTF-8 pass below, which still replaces any
+            // fall through to the UTF-8 pass, which still replaces any
             // sequence the parser would choke on.
             $converted = mb_convert_encoding($html, 'UTF-8', 'UTF-8');
         }
@@ -149,8 +142,8 @@ final class MetadataExtractor
             return null;
         }
 
-        // Restored rather than left on, because this is a process-wide switch
-        // and the rest of the request is entitled to see its own libxml errors.
+        // Process-wide switch, so it is restored: the rest of the request is
+        // entitled to see its own libxml errors.
         $previous = libxml_use_internal_errors(true);
 
         $document = new DOMDocument();
@@ -163,13 +156,11 @@ final class MetadataExtractor
     }
 
     /**
-     * Makes the document say what it now is.
-     *
      * The bytes are UTF-8 by this point, but libxml still reads the page's own
      * charset declaration and would decode them a second time as whatever the
      * origin claimed. Every declaration is pointed at UTF-8, and one of ours
-     * leads the document for the pages that declare nothing, which libxml
-     * would otherwise read as ISO-8859-1.
+     * leads the document for pages that declare nothing, which libxml would
+     * otherwise read as ISO-8859-1.
      */
     private function declareUtf8(string $html): string
     {
@@ -180,10 +171,9 @@ final class MetadataExtractor
     }
 
     /**
-     * Every `<meta>` that names itself, keyed by `property` or `name`.
-     *
-     * First occurrence wins, which is what crawlers do with the duplicated
-     * Open Graph blocks that content management systems emit.
+     * Keyed by `property` or `name`, first occurrence winning, which is what
+     * crawlers do with the duplicated Open Graph blocks that content
+     * management systems emit.
      *
      * @return array<string, string>
      */
@@ -267,9 +257,9 @@ final class MetadataExtractor
     /**
      * How good a candidate a `rel` value is, lower being better.
      *
-     * `apple-touch-icon` is ranked last of the named three because it is a
-     * launcher tile: often 180px of padded artwork where the plain `icon` is
-     * the mark the site actually uses next to its name.
+     * `apple-touch-icon` ranks last of the named three because it is a launcher
+     * tile: often 180px of padded artwork, where the plain `icon` is the mark
+     * the site actually uses next to its name.
      */
     private function faviconRank(string $rel): ?int
     {
@@ -297,12 +287,9 @@ final class MetadataExtractor
     }
 
     /**
-     * Every JSON-LD node on the page, flattened.
-     *
-     * Sites wrap their real node in a list, or in a `@graph`, or in both, and
-     * which of those a given plugin emits is not worth caring about here.
-     * Malformed JSON is common enough that it cannot be an error: one broken
-     * analytics blob must not cost the page its preview.
+     * Every JSON-LD node, flattened out of the lists and `@graph` wrappers
+     * sites bury them in. Malformed JSON is skipped rather than raised: one
+     * broken analytics blob must not cost the page its preview.
      *
      * @return list<array<array-key, mixed>>
      */
@@ -354,9 +341,9 @@ final class MetadataExtractor
     }
 
     /**
-     * The keys are tried in turn across every node, rather than every key
-     * against each node in turn, so that an `Article`'s `headline` still wins
-     * over the `WebSite` node's `name` no matter which came first in the graph.
+     * Each key is tried across every node before the next key is, so an
+     * `Article`'s `headline` beats a `WebSite` node's `name` no matter which
+     * came first in the graph.
      *
      * @param  list<array<array-key, mixed>>  $nodes
      */
@@ -452,12 +439,9 @@ final class MetadataExtractor
     }
 
     /**
-     * An absolute `http`/`https` URL, or nothing.
-     *
-     * Pages routinely give `/img/card.png` or `//cdn.example.com/card.png`,
-     * and both used to be handed to the browser verbatim. Anything that does
-     * not resolve to the web is dropped here rather than shipped for the
-     * frontend to hide: `data:` and `javascript:` have no business in a card.
+     * An absolute `http`/`https` URL, or nothing. Anything that does not
+     * resolve to the web is dropped here rather than shipped for the frontend
+     * to hide: `data:` and `javascript:` have no business in a card.
      */
     private function resolveUrl(?string $value, ?UriInterface $base): ?string
     {
@@ -477,9 +461,8 @@ final class MetadataExtractor
             return null;
         }
 
-        // A bare `#` resolves to the page itself, which is valid per RFC 3986
-        // and useless as an image: the card would point at the HTML it came
-        // from and render as a broken thumbnail.
+        // A bare `#` resolves to the page itself: valid per RFC 3986, and a
+        // broken thumbnail as an image.
         if ($this->isSameDocument($target)) {
             return null;
         }
@@ -510,7 +493,7 @@ final class MetadataExtractor
 
         $decoded = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        // The non-breaking space is in here with the rest because it arrives as
+        // The non-breaking space is collapsed with the rest: it arrives as
         // `&nbsp;` in a great many titles and is invisible once decoded, so a
         // run of them reads as a gap the card cannot explain.
         $text = trim((string) preg_replace('/[\s\x{00a0}\x{200b}\x{feff}]+/u', ' ', $decoded));
@@ -527,10 +510,9 @@ final class MetadataExtractor
         $cut = mb_substr($text, 0, $limit - 1);
         $boundary = mb_strrpos($cut, ' ');
 
-        // Only cut at a word boundary when there is a word's worth of text on
-        // the near side of it. Japanese and Chinese do not space their words,
-        // so a single space early in a long title would otherwise throw the
-        // whole description away.
+        // Only cut at a word boundary with a word's worth of text before it.
+        // Japanese and Chinese do not space their words, so a single early
+        // space would otherwise throw the whole description away.
         if ($boundary !== false && $boundary >= intdiv($limit, 2)) {
             $cut = mb_substr($cut, 0, $boundary);
         }

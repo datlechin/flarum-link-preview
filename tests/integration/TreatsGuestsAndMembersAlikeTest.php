@@ -19,10 +19,9 @@ use PHPUnit\Framework\Attributes\Test;
  * The endpoint is deliberately open.
  *
  * A preview says no more about a page than the page tells any visitor, and a
- * guest who can read the post can already read the address in it. Gating this
- * would only mean a forum that reads fine while logged out grows a row of
- * broken cards. What keeps it from being an open proxy is the address checks,
- * the throttler and the cache, none of which care who is asking.
+ * guest who can read the post can already read the address in it. What keeps
+ * it from being an open proxy is the address checks, the throttler and the
+ * cache, none of which care who is asking.
  */
 class TreatsGuestsAndMembersAlikeTest extends TestCase
 {

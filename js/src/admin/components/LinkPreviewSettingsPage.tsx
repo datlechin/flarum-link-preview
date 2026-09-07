@@ -8,18 +8,13 @@ import type Mithril from 'mithril';
 
 import { NUMBER_BOUNDS, SETTING, settingKey, trans, transText } from '../config';
 
-/**
- * Anything `buildSettingComponent` accepts beside the three things this page
- * derives from a setting's name.
- */
+/** Anything `buildSettingComponent` accepts beyond what `field()` derives from a name. */
 type FieldOptions = { type: string; [attr: string]: unknown };
 
 /**
- * A page rather than nine `Extend.Admin().setting()` calls, for one reason:
- * the grouping. Core renders registered settings as one flat column, and read
- * flat these nine give no sign that two of them decide which links the other
- * seven ever get to describe. Nothing else here needs a page, so everything
- * else is core's, called rather than reimplemented.
+ * The extension's settings, grouped. Core renders registered settings as one
+ * flat column, which gives no sign that two of these decide which links the
+ * other seven ever get to describe.
  */
 export default class LinkPreviewSettingsPage extends ExtensionPage {
   content() {
@@ -28,12 +23,12 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
         <div className="container">
           <Form>
             {this.settingSections().toArray()}
-            {/* Both buttons live in the `content()` this page replaces, so they
-                are built here from the same methods core builds them with. */}
+            {/* Both buttons live in the `content()` this page replaces, so
+                they are built here from the methods core builds them with. */}
             <div className="Form-group Form-controls">
               {this.submitButton()}
               {this.resetButton(
-                // Core's default reads `settingLabels`, which `field()` fills,
+                // Core's default reads the `settingLabels` that `field()` fills,
                 // so the modal lists settings by name rather than by key.
                 undefined,
                 app.translator.trans(
@@ -51,18 +46,16 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
   }
 
   saveSettings(e: SaveSubmitEvent) {
-    // Submitting does not always take focus off a field first, so the numbers
-    // are checked once more on the way out.
+    // Submitting does not always take focus off a field first.
     Object.keys(NUMBER_BOUNDS).forEach((name) => this.clampNumber(name));
 
     return super.saveSettings(e);
   }
 
   /**
-   * Nothing enforces `min` on a number input, and an emptied one saves as an
-   * empty row. The server clamps both back into range on every read, so what
-   * would otherwise happen is that the field says one thing and the forum does
-   * another. Correcting the field keeps the two in agreement.
+   * Nothing enforces `min` on a number input and an emptied one saves as an
+   * empty row, while the server clamps both back into range on every read. The
+   * field would otherwise show a number the forum ignores.
    */
   protected clampNumber(name: string): void {
     const { min, fallback } = NUMBER_BOUNDS[name];
@@ -80,11 +73,9 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
   }
 
   /**
-   * Builds one field from its name.
-   *
-   * `buildSettingComponent` records nothing about what it built, so the reset
-   * modal would list these settings by their storage keys. Registering the
-   * label alongside the stream gives that list the names the fields carry.
+   * `buildSettingComponent` records nothing about what it built, so the label
+   * is registered alongside the stream; otherwise the reset modal lists these
+   * settings by their storage keys.
    */
   protected field(name: string, options: FieldOptions): Mithril.Children {
     const key = settingKey(name);
@@ -103,13 +94,12 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
   }
 
   /**
-   * Exposed as an `ItemList` so another extension can slot a section of its own
-   * between these, which is the only way into a page that draws its own fields.
+   * An `ItemList` so another extension can slot a section of its own between
+   * these, which is the only way into a page that draws its own fields.
    *
-   * Every section carries `FieldSet--form`. Without it core spaces the items in
-   * a fieldset 5px apart while spacing the label and help text inside one field
-   * 10px apart, so each help text sits closer to the next field than to the one
-   * it describes. `MailPage` is core's own use of the modifier.
+   * `FieldSet--form` on every section: without it core spaces fieldset items
+   * 5px apart and label to help text 10px, so each help text sits closer to
+   * the next field than to the one it describes.
    */
   settingSections(): ItemList<Mithril.Children> {
     const items = new ItemList<Mithril.Children>();
@@ -156,8 +146,7 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
     );
 
     // Core's `content()` renders whatever another extension registered against
-    // this one. Replacing that method would otherwise make this the one
-    // extension page on the panel that silently drops those.
+    // this one, and replacing that method would silently drop them.
     const registered = app.registry.getSettings(this.extension.id) ?? [];
 
     if (registered.length) {

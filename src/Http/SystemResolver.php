@@ -14,11 +14,8 @@ namespace Datlechin\LinkPreview\Http;
 /**
  * The real resolver, asking the host it is running on.
  *
- * Both address families are looked up. The code this replaces called
- * `gethostbyname()`, which only knows about A records and, worse, returns the
- * hostname it was given when the lookup fails, so on an IPv6-only host every
- * preview in the forum failed with no way to tell that DNS was the reason.
- * That is one of the two suspected causes of issue #39.
+ * Both address families are looked up: a host carrying only AAAA records must
+ * not come back as one that does not resolve.
  */
 final class SystemResolver implements Resolver
 {
@@ -29,9 +26,8 @@ final class SystemResolver implements Resolver
     {
         $literal = trim($host, '[]');
 
-        // A URL may name an address directly, in which case there is nothing
-        // to look up. The brackets an IPv6 literal wears in a URL are not part
-        // of the address and would fail every check downstream.
+        // The brackets an IPv6 literal wears in a URL are not part of the
+        // address and would fail every check downstream.
         if (filter_var($literal, FILTER_VALIDATE_IP) !== false) {
             return [$literal];
         }

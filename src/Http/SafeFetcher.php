@@ -34,41 +34,20 @@ use Throwable;
  * Fetches the head of a remote page on behalf of whoever posted the link.
  *
  * Any URL a forum member types is a URL the server can be made to request, so
- * this is the security boundary of the extension. It is modelled on core's own
- * avatar fetcher in `Flarum\Api\Resource\UserResource::retrieveAvatarFromUrl()`,
- * with four deliberate differences:
- *
- * - RFC1918 ranges are blocked as well as reserved ones, and so is everything
- *   in {@see self::BLOCKED_RANGES} that `filter_var()` lets through. The
- *   avatar fetcher leaves private LAN addresses reachable so that Docker
- *   networks and reverse proxies keep working. A preview of a link someone
- *   pasted into a post has no such need, and the forum's own URLs are answered
- *   by {@see \Datlechin\LinkPreview\Preview\DiscussionPreviewer} without ever
- *   reaching this class.
- * - Redirects are followed here rather than by Guzzle, because Guzzle would
- *   revalidate nothing: `Location: http://169.254.169.254/` from a host that
- *   passed every check is the whole attack, and every hop has to be checked
- *   the same way the first one was.
- * - The status code is honoured. The version this replaces sent
- *   `http_errors => false` and then parsed whatever came back, so a Cloudflare
- *   challenge page was cached and shown as a real preview titled
- *   "Just a moment...". That is the other suspected cause of issue #39.
- * - The transport is named rather than left to Guzzle, because the address pin
- *   below only exists in the cURL one. The avatar fetcher has the same latent
- *   hole and is not an argument that leaving the choice to Guzzle is safe;
- *   {@see self::clientConfig()} says why.
+ * this is the security boundary of the extension. Redirects are followed here
+ * rather than by Guzzle, which would revalidate nothing: `Location:
+ * http://169.254.169.254/` from a host that passed every check is the whole
+ * attack, and every hop has to be checked the way the first one was.
  */
 final class SafeFetcher
 {
     /**
      * How much of a body may be read before the head is given up on.
      *
-     * Measured byte offset of `</head>` on real pages: Wikipedia 9KB, PS
-     * Store 12KB, GitHub 31KB, discuss.flarum.org 65KB, YouTube 713KB.
-     * YouTube inlines a very large script into the head ahead of its meta
-     * tags, so at the previous 256KB the most linked site on the web came
-     * back as no_metadata. The read still stops at `</head>`, so the other
-     * four cost exactly what they cost before.
+     * Measured byte offset of `</head>` on real pages: Wikipedia 9KB, PS Store
+     * 12KB, GitHub 31KB, discuss.flarum.org 65KB, YouTube 713KB, which inlines
+     * a very large script ahead of its meta tags. The read stops at `</head>`,
+     * so a cap this high costs the other four nothing.
      */
     public const MAX_BYTES = 1048576;
 
@@ -82,16 +61,16 @@ final class SafeFetcher
      * How long {@see self::readHead()} may spend collecting one body.
      *
      * The byte cap bounds a flood and the cURL options bound a trickle, but a
-     * handler that is neither, a test double or a PSR-18 client someone
-     * injected, is bounded by nothing else once the response object exists.
+     * handler that is neither, a test double or an injected PSR-18 client, is
+     * bounded by nothing else once the response object exists.
      */
     private const READ_SECONDS = 5;
 
     /**
      * Below this many bytes a second for this many seconds, the transfer is
-     * treated as stalled and dropped. `timeout` is the real bound; this only
-     * gives the connection back sooner, and is deliberately slack so that a
-     * site that thinks for a few seconds before answering is not cut off.
+     * dropped as stalled. `timeout` is the real bound; this only gives the
+     * connection back sooner, and is slack so that a site thinking for a few
+     * seconds before it answers is not cut off.
      */
     private const MIN_BYTES_PER_SECOND = 256;
     private const STALL_SECONDS = 5;
@@ -104,9 +83,6 @@ final class SafeFetcher
 
     private const REDIRECT_STATUSES = [301, 302, 303, 307, 308];
 
-    /**
-     * Ports the forum will speak HTTP to besides the scheme's own.
-     */
     private const ALTERNATE_PORTS = [8080, 8443];
 
     /**
@@ -117,50 +93,45 @@ final class SafeFetcher
     /**
      * Subnet => prefix length, for ranges `filter_var()` admits anyway.
      *
-     * `FILTER_FLAG_NO_RES_RANGE` and `FILTER_FLAG_NO_PRIV_RANGE` between them
-     * cover loopback, link local and RFC1918, and the exact list beyond that
-     * moves between PHP builds. Everything here either reaches something that
-     * is not the public internet or is not a host at all, so each range is
-     * refused by hand rather than left to the filter.
+     * The filter flags cover loopback, link local and RFC1918, and the exact
+     * list beyond that moves between PHP builds. Everything here either reaches
+     * something that is not the public internet or is not a host at all, so
+     * each range is refused by hand rather than left to the filter.
      *
      * @var array<string, int>
      */
     private const BLOCKED_RANGES = [
-        // "This network". 0.0.0.0 is the local host to most stacks, and Linux
+        // "This network": 0.0.0.0 is the local host to most stacks, and Linux
         // routes the rest of the range to it as well.
         '0.0.0.0' => 8,
-        // Carrier grade NAT, which is the ISP's own network on a home
-        // connection and the node network inside several cloud providers.
+        // Carrier grade NAT: the ISP's own network on a home connection, and
+        // the node network inside several cloud providers.
         '100.64.0.0' => 10,
-        // IETF protocol assignments, which contains 192.0.0.192 and the rest
-        // of the addresses infrastructure answers on rather than hosts.
+        // IETF protocol assignments: 192.0.0.192 and the rest of the addresses
+        // infrastructure answers on rather than hosts.
         '192.0.0.0' => 24,
-        // Benchmarking, which network gear uses for test interfaces that are
-        // reachable from inside the network and from nowhere else.
+        // Benchmarking, which network gear uses for test interfaces reachable
+        // from inside the network and from nowhere else.
         '198.18.0.0' => 15,
-        // Reserved for future use, including the 255.255.255.255 broadcast
-        // address that a stack may take as "everything on this segment".
+        // Reserved for future use, including the 255.255.255.255 broadcast a
+        // stack may take as "everything on this segment".
         '240.0.0.0' => 4,
-        // IPv6 site local. Deprecated in favour of unique local addresses,
-        // still configured on plenty of hardware, and not covered by the
-        // private range flag.
+        // IPv6 site local: deprecated, still configured on plenty of hardware,
+        // and not covered by the private range flag.
         'fec0::' => 10,
-        // NAT64, which is an IPv4 address in the low 32 bits and a router
-        // willing to forward to it. 64:ff9b::7f00:1 is loopback with an
-        // extra hop in front of it.
+        // NAT64: an IPv4 address in the low 32 bits and a router willing to
+        // forward to it. 64:ff9b::7f00:1 is loopback with an extra hop.
         '64:ff9b::' => 96,
-        // Multicast, which is a group of listeners rather than a host. The
-        // groups that answer are the ones on the segment the forum is on,
-        // and 239.255.255.250 is every UPnP device in the rack.
+        // Multicast, a group of listeners rather than a host. The groups that
+        // answer are on the forum's own segment, and 239.255.255.250 is every
+        // UPnP device in the rack.
         '224.0.0.0' => 4,
         'ff00::' => 8,
-        // 6to4, an IPv4 address in bits 16 to 48 and a relay willing to
-        // carry to it. 2002:7f00:1:: is loopback behind a tunnel.
+        // 6to4: an IPv4 address in bits 16 to 48 and a relay willing to carry
+        // to it. 2002:7f00:1:: is loopback behind a tunnel.
         '2002::' => 16,
-        // IPv4-compatible IPv6, the deprecated `::a.b.c.d`, whose low 32
-        // bits a stack that still parses it treats as an IPv4 destination.
-        // The reserved flag appears to cover this, but it decides on the
-        // notation rather than the value: `::10.0.0.5` is refused and
+        // IPv4-compatible IPv6, the deprecated `::a.b.c.d`. The reserved flag
+        // decides on notation rather than value: `::10.0.0.5` is refused and
         // `::a00:5`, the same sixteen bytes, is not.
         '::' => 96,
     ];
@@ -168,26 +139,20 @@ final class SafeFetcher
     /**
      * An honest crawler identity rather than an impersonation of a browser.
      *
-     * The string this replaces claimed to be Chrome on Windows, inherited
-     * from the code this class replaced. Measured: facebook.com answers 400
-     * to a desktop Chrome agent arriving from a server and 200 to a bot that
-     * names itself. Working better is the smaller half of the reason. A site
-     * that would rather not be previewed can only decide that if the request
-     * admits what it is, and a forged browser agent takes the decision away
-     * from them. Shaped after facebookexternalhit and Discoursebot, because
-     * that is the shape operators already write rules against. Still no
-     * cookie jar and still nothing about the reader who triggered it, so a
-     * preview cannot be used to fingerprint anyone.
+     * Measured: facebook.com answers 400 to a desktop Chrome agent arriving
+     * from a server and 200 to a bot that names itself. A site that would
+     * rather not be previewed can only decide that if the request admits what
+     * it is. Shaped after facebookexternalhit and Discoursebot, because that is
+     * the shape operators already write rules against.
      */
     private const USER_AGENT = 'Mozilla/5.0 (compatible; FlarumLinkPreview/1.0; +https://github.com/datlechin/flarum-link-preview)';
 
     /**
      * Whether the body has to be bounded by refusing to buffer it.
      *
-     * True only for the client this class builds on a host without ext-curl,
-     * because that is the one case where the transport is known to be PHP's
-     * stream wrapper. An injected client is a test double or somebody else's
-     * wiring and its handler is not ours to guess at.
+     * True only for the client this class builds without ext-curl, the one case
+     * where the transport is known to be PHP's stream wrapper. An injected
+     * client's handler is not ours to guess at.
      */
     private readonly bool $capsBodyInSink;
 
@@ -215,18 +180,16 @@ final class SafeFetcher
     /**
      * Fetch a batch concurrently, in rounds, one round per redirect hop.
      *
-     * A post can carry twenty links and each of them can take the full
-     * {@see self::TIMEOUT}, so doing this one at a time would let a single slow
-     * host hold the request open for most of three minutes. Redirects are
-     * followed a round at a time rather than per URL so that a chain in one of
-     * them does not serialise the rest of the batch behind it.
+     * A post can carry twenty links and each can take the full
+     * {@see self::TIMEOUT}. Redirects are followed a round at a time rather
+     * than per URL so a chain in one does not serialise the rest behind it.
      *
      * @param list<string> $urls
      * @param null|callable(string): bool $guard a check the caller runs against
      *        every hop before it is connected to, including each redirect
      *        target. It refuses by throwing a {@see LinkPreviewException},
      *        which is attributed to the URL that was asked for rather than
-     *        ending the round. This class never learns what the check is for.
+     *        ending the round.
      *
      * @return array<string, FetchResult|LinkPreviewException> keyed by the input url
      */
@@ -252,12 +215,11 @@ final class SafeFetcher
                 } catch (LinkPreviewException $exception) {
                     $results[$requested] = $exception;
                 } catch (MalformedUriException $exception) {
-                    // `http://good.test:+80/a` satisfies parse_url, and so
-                    // every check above, and is then refused by the URI parser
-                    // Guzzle builds the request with. That happens here rather
-                    // than inside the promise, so left uncaught it leaves
-                    // fetchMany, 500s the endpoint, and takes every other URL
-                    // in the batch with it.
+                    // `http://good.test:+80/a` satisfies parse_url and so every
+                    // check above, then is refused by the URI parser Guzzle
+                    // builds the request with. That happens here rather than
+                    // inside the promise, so uncaught it 500s the endpoint and
+                    // takes the rest of the batch with it.
                     $results[$requested] = new UnsafeUrlException("Refusing to fetch $url, which is not a URL.", 0, $exception);
                 }
             }
@@ -312,8 +274,7 @@ final class SafeFetcher
         $ordered = [];
 
         // A URL rejected before it was ever sent lands in $results a round
-        // earlier than one that had to be fetched, so without this the batch
-        // comes back in an order that has nothing to do with the request.
+        // earlier than one that had to be fetched.
         foreach ($urls as $url) {
             $ordered[$url] = $results[$url];
         }
@@ -331,23 +292,19 @@ final class SafeFetcher
      *
      * Left alone, it wraps the cURL handler in a streaming proxy whenever
      * `allow_url_fopen` is on, which is the PHP default, and the proxy hands
-     * every request marked `stream` to the stream handler instead. That
-     * handler ignores the `curl` request option, so the CURLOPT_RESOLVE pin
-     * never reached the transport and the address a record rebound to between
-     * the lookup and the connect was the one connected to. It is also
-     * synchronous, so {@see Utils::settle()} resolved the batch one URL at a
-     * time and nothing about `fetchMany()` was concurrent. Naming the multi
-     * handler fixes both.
+     * every request marked `stream` to the stream handler instead. That handler
+     * ignores the `curl` request option, so the CURLOPT_RESOLVE pin never
+     * reaches the transport, and it is synchronous, so nothing about
+     * `fetchMany()` is concurrent.
      *
      * @return array<string, mixed>
      */
     private function clientConfig(): array
     {
-        // Without cURL there is no pin to land, no concurrency to be had and
-        // no way to abort a transfer. The address check still runs before
-        // every hop, so what is missing here is the narrow rebinding window
-        // rather than the rule itself, and the byte cap comes back as the sink
-        // {@see self::options()} attaches on this path.
+        // Without cURL there is no pin to land and no way to abort a transfer.
+        // The address check still runs before every hop, so what is missing is
+        // the narrow rebinding window rather than the rule, and the byte cap
+        // comes back as the sink {@see self::options()} attaches on this path.
         if (! extension_loaded('curl')) {
             return [];
         }
@@ -378,9 +335,8 @@ final class SafeFetcher
             throw new UnsafeUrlException("Refusing to fetch $url, which names no host.");
         }
 
-        // After the checks that decide whether this is a URL at all and before
-        // the lookup, so that a hop the caller refuses costs no DNS and is
-        // reported as their refusal rather than as a bad address.
+        // Before the lookup, so that a hop the caller refuses costs no DNS and
+        // is reported as their refusal rather than as a bad address.
         if ($guard !== null && ! $guard($url)) {
             throw new UnsafeUrlException("Refusing to fetch $url, which the caller declined.");
         }
@@ -394,8 +350,6 @@ final class SafeFetcher
 
         $options = $this->options();
 
-        // Needs the cURL handler, which clientConfig() asks for whenever the
-        // extension is there, and is harmless without it.
         if (defined('CURLOPT_RESOLVE')) {
             $options['curl'] = $this->curlOptions($host, $port, $ip);
         }
@@ -406,9 +360,9 @@ final class SafeFetcher
     /**
      * Options every request in every round shares.
      *
-     * `verify` is never turned off. The page being previewed is untrusted
-     * input either way, but an unverified TLS connection would also let anyone
-     * on the path choose what the forum caches under someone else's domain.
+     * `verify` is never turned off: an unverified TLS connection would let
+     * anyone on the path choose what the forum caches under someone else's
+     * domain.
      *
      * @return array<string, mixed>
      */
@@ -424,10 +378,9 @@ final class SafeFetcher
             // that somehow got past the scheme check above cannot reach
             // file:// or gopher:// through cURL either.
             'protocols' => ['http', 'https'],
-            // The body is now buffered before the promise resolves, and the
-            // byte cap counts what arrives on the wire. Accepting a content
-            // encoding would let a few compressed kilobytes expand into a
-            // buffer nothing bounds, so the forum asks for none.
+            // The byte cap counts what arrives on the wire, so accepting a
+            // content encoding would let a few compressed kilobytes expand into
+            // a buffer nothing bounds.
             'decode_content' => false,
             'headers' => [
                 'User-Agent' => self::USER_AGENT,
@@ -436,11 +389,10 @@ final class SafeFetcher
             ],
         ];
 
-        // Nothing else bounds the body on the stream transport: it has no
-        // progress callback to abort a transfer from, and it buffers the whole
-        // thing into the sink before the promise resolves. A sink that stops
-        // accepting bytes is the only lever left. Fresh per request, because
-        // the same one handed to two of them would interleave.
+        // Nothing else bounds the body on the stream transport: no progress
+        // callback to abort from, and the whole thing is buffered before the
+        // promise resolves. Fresh per request, because the same sink handed to
+        // two of them would interleave.
         if ($this->capsBodyInSink) {
             $options['sink'] = CappedSink::ofBytes(self::MAX_BYTES);
         }
@@ -454,28 +406,24 @@ final class SafeFetcher
     private function curlOptions(string $host, int $port, string $ip): array
     {
         $options = [
-            // Pin the connection to the address just validated, so a record
-            // that rebinds between the lookup and the connect cannot swap in a
-            // blocked one.
+            // Pin to the address just validated, so a record that rebinds
+            // between the lookup and the connect cannot swap in a blocked one.
             CURLOPT_RESOLVE => [$this->pin($host, $port, $ip)],
-            // A body that arrives a few bytes at a time stays under the byte
-            // cap for as long as the total timeout allows. This drops it as
-            // soon as it is clear nothing is really coming.
+            // A body arriving a few bytes at a time stays under the byte cap
+            // for as long as the total timeout allows.
             CURLOPT_LOW_SPEED_LIMIT => self::MIN_BYTES_PER_SECOND,
             CURLOPT_LOW_SPEED_TIME => self::STALL_SECONDS,
         ];
 
         // cURL hands Guzzle the whole body before it resolves the promise, so
-        // the cap in readHead() cannot stop a gigabyte that a link in a post
-        // asked for; only aborting the transfer can. The abort comes back as a
-        // rejection, which cappedResponse() turns back into what did arrive.
+        // the cap in readHead() cannot stop a gigabyte; only aborting the
+        // transfer can. The abort comes back as a rejection, which
+        // cappedResponse() turns back into what did arrive.
         //
         // Both options below are deprecated as of guzzlehttp/guzzle 7.11 and
         // rejected outright by 8.0, which points at the `progress` request
-        // option instead. That option is not a replacement for this: Guzzle
-        // wraps the callback and throws away what it returns, and the return
-        // value is the entire mechanism, so on Guzzle 8 the byte cap needs a
-        // handler of its own rather than a swapped option.
+        // option instead. That is not a replacement: Guzzle throws away what
+        // the callback returns, and the return value is the entire mechanism.
         if (defined('CURLOPT_XFERINFOFUNCTION')) {
             $options[CURLOPT_NOPROGRESS] = false;
             $options[CURLOPT_XFERINFOFUNCTION] = static function (mixed $handle, int $expected, int $downloaded): int {
@@ -491,10 +439,9 @@ final class SafeFetcher
      * One CURLOPT_RESOLVE entry.
      *
      * cURL matches the entry against the host as the URL spells it, which for
-     * an IPv6 literal is the address without the brackets it wears in a URL,
-     * and wants the address to use with them: `::1:443:[::1]`. Writing either
-     * half the other way round makes the entry match nothing, and an entry
-     * that matches nothing is a pin that is not pinning.
+     * an IPv6 literal is the address without its brackets, and wants the
+     * address to use with them: `::1:443:[::1]`. Either half written the other
+     * way round matches nothing, which is a pin that is not pinning.
      */
     private function pin(string $host, int $port, string $ip): string
     {
@@ -508,11 +455,10 @@ final class SafeFetcher
      * The port to connect on.
      *
      * The address check says the host is somewhere on the public internet, not
-     * that the port answers HTTP. Left open, a posted link is a way to make
-     * the forum connect to any port of any host and to time the answer, which
-     * maps what is listening from the forum's own address and reaches whatever
-     * only trusts that address. Two extra ports because a real site is
-     * occasionally served on one.
+     * that the port answers HTTP. Left open, a posted link times the answer
+     * from any port of any host, which maps what is listening from the forum's
+     * own address and reaches whatever only trusts that address. Two extra
+     * ports because a real site is occasionally served on one.
      *
      * @throws UnsafeUrlException
      */
@@ -547,8 +493,6 @@ final class SafeFetcher
 
     /**
      * The address to connect to, or null when the forum must not reach it.
-     *
-     * @see self::BLOCKED_RANGES for what the filter flags miss
      */
     private function routableAddress(string $ip): ?string
     {
@@ -558,9 +502,9 @@ final class SafeFetcher
 
         $ip = $this->unwrapMappedIpv4($ip);
 
-        // Reserved covers loopback and link local, which is where the cloud
-        // metadata endpoint at 169.254.169.254 lives; private covers the LAN
-        // the forum shares with whatever else the operator is running.
+        // Reserved covers loopback and link local, where the cloud metadata
+        // endpoint at 169.254.169.254 lives; private covers the LAN the forum
+        // shares with whatever else the operator is running.
         if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE | FILTER_FLAG_NO_PRIV_RANGE) === false) {
             return null;
         }
@@ -575,10 +519,9 @@ final class SafeFetcher
     }
 
     /**
-     * `::ffff:127.0.0.1` is loopback wearing an IPv6 coat, and the rules that
-     * decide whether those four bytes are reachable are the IPv4 ones. Every
-     * range is written in the family it belongs to, so the address has to be
-     * put in that family before any of them is asked about it.
+     * `::ffff:127.0.0.1` is loopback wearing an IPv6 coat, and the rules for
+     * those four bytes are the IPv4 ones. Every range is written in the family
+     * it belongs to, so the address has to be put in that family first.
      */
     private function unwrapMappedIpv4(string $ip): string
     {
@@ -625,9 +568,9 @@ final class SafeFetcher
      * the request failed for a reason of its own.
      *
      * The byte cap has to abort rather than stop reading, and an abort arrives
-     * as a rejection. The headers and the bytes that did land are on the
-     * exception, and the front of a document is all a preview ever wanted, so
-     * the response goes on to be read exactly as a whole one would be.
+     * as a rejection carrying the headers and the bytes that did land. The
+     * front of a document is all a preview wanted, so the response goes on to
+     * be read exactly as a whole one would be.
      */
     private function cappedResponse(mixed $reason): ?ResponseInterface
     {
@@ -668,9 +611,7 @@ final class SafeFetcher
         }
 
         // Two Location headers are two answers, and getHeaderLine() joins them
-        // into a third that is neither. Whatever the second one is for, the
-        // first is the hop a browser takes and the one worth caching as the
-        // address the card points at.
+        // into a third that is neither. The first is the hop a browser takes.
         $location = $response->getHeader('Location')[0] ?? '';
 
         // A redirect status with nothing to redirect to falls through to the
@@ -694,9 +635,8 @@ final class SafeFetcher
         $status = $response->getStatusCode();
 
         if ($status !== 200) {
-            // The status rides on the code, because that is how
-            // {@see \Datlechin\LinkPreview\Preview\Previewer::answered()} tells
-            // a host that refused from a host that never answered at all.
+            // The status rides on the code, which is how the previewer tells a
+            // host that refused from a host that never answered at all.
             throw new FetchFailedException("$url answered with status $status.", $status);
         }
 
@@ -717,10 +657,8 @@ final class SafeFetcher
     /**
      * Read as much of the body as could contain metadata, and no more.
      *
-     * Everything worth extracting lives in the head, so the read stops at the
-     * closing tag and never buffers the article, the comments and the ad
-     * scripts underneath it. Content-Length is not consulted: it is optional,
-     * it lies, and it says nothing about a chunked response.
+     * Content-Length is not consulted: it is optional, it lies, and it says
+     * nothing about a chunked response.
      *
      * @throws FetchFailedException
      */
@@ -733,8 +671,7 @@ final class SafeFetcher
         try {
             while (! $stream->eof() && strlen($body) < self::MAX_BYTES) {
                 // A stream that hands over a byte at a time never trips the
-                // byte cap, and the cURL guard against that is not there when
-                // the response came from some other client.
+                // byte cap, and the cURL guard is not there for another client.
                 if (microtime(true) > $deadline) {
                     break;
                 }

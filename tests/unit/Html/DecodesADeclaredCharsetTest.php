@@ -89,9 +89,9 @@ class DecodesADeclaredCharsetTest extends TestCase
     #[Test]
     public function the_header_is_believed_over_the_page(): void
     {
-        // Servers are reconfigured more often than templates are, so a page
-        // whose meta tag still names the old encoding is common. The header
-        // describes the bytes that actually arrived.
+        // Servers are reconfigured more often than templates are, so the
+        // header describes the bytes that actually arrived and a stale meta
+        // tag does not.
         $html = $this->encoded(
             '<html><head><meta charset="UTF-8"><title>'.self::GERMAN.'</title></head></html>',
             'ISO-8859-1',

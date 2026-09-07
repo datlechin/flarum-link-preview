@@ -20,14 +20,12 @@ use Psr\Http\Message\ResponseInterface;
  * The line between a request that is wrong and an address that cannot be
  * previewed.
  *
- * A caller that sends no URL has made a mistake and gets a 400. An address that
- * turns out to be unreachable, blocked or empty has not: that is an ordinary
- * answer with an error code in it, cacheable and renderable, and the whole
- * frontend depends on the two never being confused.
- *
- * The shape of the request is part of the same boundary. Both endpoints take a
- * JSON body over POST and neither answers a GET, so neither can be triggered
- * from somebody else's page.
+ * A caller that sends no URL has made a mistake and gets a 400. An address
+ * that turns out to be unreachable, blocked or empty has not: that is an
+ * ordinary answer with an error code in it, cacheable and renderable, and the
+ * frontend depends on the two never being confused. Both endpoints take a JSON
+ * body over POST and neither answers a GET, so neither can be triggered from
+ * somebody else's page.
  */
 class RefusesMalformedRequestsTest extends TestCase
 {
@@ -75,11 +73,8 @@ class RefusesMalformedRequestsTest extends TestCase
     #[Test]
     public function the_endpoint_cannot_be_reached_with_a_get(): void
     {
-        // The reason the single endpoint is a POST. A GET is something any
-        // other site can cause: an `<img src>` pointing here makes the browser
-        // of whoever visits that page ask this forum to open a connection, with
-        // no preflight in the way and nothing for the forum to refuse. A JSON
-        // body cannot be sent cross site without one.
+        // An `<img src>` pointing here would make any visitor's browser ask
+        // this forum to open a connection, with no preflight in the way.
         $response = $this->send(
             $this->request('GET', '/api/datlechin-link-preview')
                 ->withQueryParams(['url' => 'https://example.test/'])

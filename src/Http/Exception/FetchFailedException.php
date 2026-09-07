@@ -12,15 +12,13 @@
 namespace Datlechin\LinkPreview\Http\Exception;
 
 /**
- * The request was allowed to happen but did not produce a page.
+ * The request was allowed to happen but did not produce a page: a refused
+ * connection, a timeout, a redirect loop, a body that stopped arriving, or any
+ * status other than 200.
  *
- * A refused connection, a timeout, a redirect loop, a body that stopped
- * arriving, or any status other than 200.
- *
- * Reported as `unreachable`, except when the site did answer and the answer
- * was a refusal: the status is then carried as the exception's code and
- * reported as `http_error`. Every failure that never got an answer leaves the
- * code at zero.
+ * When the site answered with a refusal the status rides on the exception code
+ * and is reported as `http_error`. Every failure that never got an answer
+ * leaves the code at zero and is reported as `unreachable`.
  */
 final class FetchFailedException extends LinkPreviewException
 {

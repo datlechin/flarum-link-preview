@@ -25,16 +25,10 @@ use Illuminate\Cache\Repository;
 /**
  * Turns addresses into cards.
  *
- * Everything that can be decided without leaving the server is decided first:
- * a malformed address, a filtered host, a link back to this forum, a preview
- * already in the cache. Only what is left goes to the network, and it goes in
- * one call, because a post with six links should cost the slowest of the six
- * rather than the sum of them.
- *
- * Failures are cached too, for a shorter time than successes. Without that, a
- * domain that has gone away costs a fresh connect timeout for every reader who
- * scrolls past the post, which is how a single dead link makes a whole forum
- * feel slow.
+ * Anything decidable without the network is decided first; what is left goes
+ * out in one call, so a post with six links costs the slowest of the six rather
+ * than the sum. Failures are cached as well as successes, for less time, so one
+ * dead domain does not cost every reader a fresh connect timeout.
  */
 final class Previewer
 {
@@ -112,10 +106,8 @@ final class Previewer
     }
 
     /**
-     * Everything an answer can be built from without opening a socket.
-     *
-     * Null means the URL still needs fetching, which is the one thing the
-     * caller has to batch.
+     * The answer if one can be had without opening a socket; null when the URL
+     * still needs fetching, which is what the caller batches.
      */
     private function settle(string $url, User $actor): ?Preview
     {
@@ -128,17 +120,14 @@ final class Previewer
         }
 
         if ($this->discussions->isInternal($url)) {
-            // The browser is expected to have skipped this link without
-            // asking. The answer is here for the page still running last
-            // week's bundle, and it is a refusal rather than a fetch, because
-            // a forum reading its own pages over the network is the one
-            // request that can wait on itself.
+            // The browser skips these already; this answers the page still on
+            // an older bundle, and refuses rather than fetching, because a
+            // forum reading its own pages can wait on the worker serving it.
             if (! $this->config->previewInternalLinks()) {
                 return Preview::error($url, PreviewError::NotPreviewable);
             }
 
-            // Not cached: it is one query, and what it is allowed to say
-            // depends on who is asking.
+            // Not cached: what it is allowed to say depends on who is asking.
             return $this->discussions->preview($url, $actor)
                 ?? Preview::error($url, PreviewError::NoMetadata);
         }
@@ -148,9 +137,9 @@ final class Previewer
 
     private function fromResult(string $url, FetchResult $result): Preview
     {
-        // The hop that produced this body was checked before it was requested,
-        // so this is the backstop rather than the rule: a fetcher that ignored
-        // the guard still must not turn a blocklisted host into a card.
+        // Backstop, not the rule: the hop was checked before it was requested,
+        // but a fetcher that ignored the guard still must not turn a
+        // blocklisted host into a card.
         if (! $this->filter()->allows($result->effectiveUrl)) {
             return $this->fail($url, PreviewError::Blocked);
         }
@@ -188,13 +177,9 @@ final class Previewer
     }
 
     /**
-     * Whether the site answered and the answer was a refusal.
-     *
-     * A 404, a 400 or a Cloudflare 403 is not the event a name that does not
-     * resolve is, and telling a reader "this site did not respond" about a site
-     * that responded and said no is simply wrong. The status rides on the
-     * exception's code, which every failure that never got an answer leaves at
-     * zero.
+     * Whether the site answered and the answer was a refusal. The status rides
+     * on the exception's code, which a failure that never got an answer leaves
+     * at zero.
      */
     private static function answered(?LinkPreviewException $exception): bool
     {
@@ -204,11 +189,8 @@ final class Previewer
     }
 
     /**
-     * The check the fetcher runs before it opens each connection.
-     *
-     * A callable rather than the filter itself, so that the fetcher stays a
-     * fetcher and never learns what an allowlist is. It refuses by throwing
-     * because a throw is what carries the reason back out of a batch attached
+     * The check the fetcher runs before it opens each connection. It refuses by
+     * throwing, because a throw carries the reason back out of a batch attached
      * to the URL that was asked for, rather than ending the whole round.
      *
      * @return callable(string): bool
@@ -258,12 +240,9 @@ final class Previewer
     }
 
     /**
-     * Rebuild a preview from what the cache holds.
-     *
-     * A flat array rather than a serialised object, and every field checked on
-     * the way back in: cache entries outlive deploys, and an entry written by
-     * a version whose classes have since changed shape has to read as a miss
-     * rather than as a fatal error on somebody's page load.
+     * Rebuild a preview from what the cache holds. Every field is checked on
+     * the way back in: entries outlive deploys, and one written to an older
+     * shape has to read as a miss rather than fatal on somebody's page load.
      */
     private static function decode(mixed $entry): ?Preview
     {
@@ -322,10 +301,8 @@ final class Previewer
     }
 
     /**
-     * The form in which two links to the same page are the same link.
-     *
-     * Keeps the scheme, which the version this replaces threw away, so that
-     * `http://example.com` and `https://example.com` no longer share one entry
+     * The form in which two links to the same page are the same link. Keeps the
+     * scheme, or `http://example.com` and `https://example.com` share one entry
      * and hand each other's readers the wrong card.
      */
     private static function canonical(string $url): string

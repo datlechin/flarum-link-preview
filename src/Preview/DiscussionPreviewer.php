@@ -25,17 +25,10 @@ use s9e\TextFormatter\Utils;
 /**
  * Previews for links that point back at this forum.
  *
- * Answered from the database, never over the network. A forum fetching its own
- * pages is asking a request to wait for a request the same server has to serve,
- * which on a single worker never finishes, and it would hand a guest a preview
- * of a discussion the guest is not allowed to read, since the fetch would carry
- * no session.
- *
- * The address shape recognised here is the one core's own
- * `Formatter::parseDiscussionUrl()` and `labelDiscussionLinks.ts` recognise,
- * down to a non-numeric position segment disqualifying the link. The three have
- * to agree, or a link core has already labelled `#12` grows a card that core
- * would not have labelled at all.
+ * Answered from the database, never over the network: on a single worker the
+ * fetch would wait on the request serving it, and carrying no session it would
+ * show a guest a discussion they cannot read. The address shape recognised here
+ * must match core's `parseDiscussionUrl()` and `labelDiscussionLinks.ts`.
  */
 final class DiscussionPreviewer
 {
@@ -61,13 +54,10 @@ final class DiscussionPreviewer
     /**
      * Whether this address is one this forum serves itself.
      *
-     * Host and port, never the scheme. A forum reachable over https is the same
-     * forum when someone pastes the http spelling of one of its own links, and
-     * comparing schemes sent exactly that link out to the network to be fetched
-     * from the server that was already handling the request. For the same
-     * reason a link that names no port is read as this forum's port rather than
-     * as the scheme's default, since the scheme it was written with is the part
-     * being ignored.
+     * Host and port, never the scheme: the http spelling of a forum's own https
+     * link is still its own link, and comparing schemes sends it out to be
+     * fetched from the server already handling the request. For the same reason
+     * a link naming no port reads as this forum's port, not the scheme's default.
      */
     public function isInternal(string $url): bool
     {
@@ -107,7 +97,6 @@ final class DiscussionPreviewer
             [
                 'id' => $discussion->id,
                 'commentCount' => $discussion->comment_count,
-                'participantCount' => $discussion->participant_count,
                 'author' => $discussion->user?->username,
                 'createdAt' => $discussion->created_at->toAtomString(),
                 'tags' => $this->tags($discussion, $actor),
@@ -166,8 +155,7 @@ final class DiscussionPreviewer
         }
 
         // Straight from the stored representation: no render, no formatter
-        // callbacks, no HTML to strip off again. The same route flarum/sticky
-        // takes for its first post excerpt.
+        // callbacks, no HTML to strip off again.
         $plain = trim(preg_replace('/\s+/', ' ', Utils::removeFormatting($xml)) ?? '');
 
         if ($plain === '') {
@@ -193,8 +181,8 @@ final class DiscussionPreviewer
 
         $tags = [];
 
-        // Scoped rather than read off the discussion, so a tag the actor is
-        // not allowed to see does not arrive on a card as a name and a colour.
+        // Scoped rather than read off the discussion, so a tag the actor may
+        // not see does not arrive on a card as a name.
         $query = Tag::whereVisibleTo($actor)
             ->join('discussion_tag', 'discussion_tag.tag_id', '=', 'tags.id')
             ->where('discussion_tag.discussion_id', $discussion->id)
@@ -241,10 +229,9 @@ final class DiscussionPreviewer
     }
 
     /**
-     * The forum's own scheme, host, port and base path.
-     *
-     * Kept rather than rebuilt: a batch asks about twenty links and the answer
-     * cannot change inside one request.
+     * The forum's own scheme, host, port and base path. Kept rather than
+     * rebuilt: a batch asks about twenty links and the answer cannot change
+     * inside one request.
      *
      * @return array{scheme: string, host: string, port: int, path: string}
      */
@@ -266,13 +253,9 @@ final class DiscussionPreviewer
     }
 
     /**
-     * The one spelling of a name that has several.
-     *
-     * A host is case insensitive, may carry the root's trailing dot, and is
-     * written with brackets round it when it is an IPv6 literal, so the same
-     * address arrives here in four shapes. Comparing them literally is how the
-     * forum ends up fetching its own pages over the network, which is the one
-     * request that can be waiting on the worker that has to serve it.
+     * The one spelling of a name that has several: a host is case insensitive,
+     * may carry the root's trailing dot, and is bracketed when it is an IPv6
+     * literal, so the same address arrives here in four shapes.
      */
     private static function host(string $host): string
     {

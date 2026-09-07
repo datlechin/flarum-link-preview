@@ -14,10 +14,8 @@ namespace Datlechin\LinkPreview\Html;
 /**
  * What a page said about itself, once the markup has been thrown away.
  *
- * Everything here is already cleaned and absolute: a caller never has to ask
- * whether the image URL is relative or whether the title still has entities in
- * it, because a `Metadata` that could not answer those questions honestly
- * carries `null` instead.
+ * Every value is already cleaned and absolute, or `null`: a caller never has to
+ * decode entities or resolve a relative image URL.
  */
 final class Metadata
 {
@@ -27,9 +25,8 @@ final class Metadata
     private const LARGE_MIN_WIDTH = 600;
 
     /**
-     * A banner is wider than it is tall but not a letterbox. Outside this band
-     * an image cropped to the large card's 2:1 frame loses the part that
-     * mattered, so it is better shown small and whole.
+     * Outside this band an image cropped to the large card's 2:1 frame loses
+     * the part that mattered, so it is better shown small and whole.
      */
     private const LARGE_MIN_RATIO = 1.2;
 
@@ -57,11 +54,9 @@ final class Metadata
     /**
      * The card shape the server is asking for.
      *
-     * Most pages give an image and no dimensions, so this deliberately says
-     * `compact` rather than guess: the browser knows the natural size the
-     * moment the image loads and upgrades the card there, which is a cheap
-     * correction, whereas a large card that turns out to hold a 16x16 sprite
-     * is a hole in the post that cannot be taken back.
+     * Unknown dimensions mean `compact` rather than a guess: the browser knows
+     * the natural size once the image loads and upgrades the card there,
+     * whereas a large card holding a 16x16 sprite is a hole in the post.
      */
     public function layout(): string
     {

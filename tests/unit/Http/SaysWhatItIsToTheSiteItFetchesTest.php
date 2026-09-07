@@ -19,12 +19,9 @@ use PHPUnit\Framework\Attributes\Test;
 /**
  * What the forum tells a site about itself when it asks for a page.
  *
- * The version this replaces sent a Chrome user agent string, which is a lie
- * that costs the operator of every previewed site the ability to see this
- * traffic for what it is: a robot, run by a forum, on behalf of somebody who
- * pasted a link. A site that wants to serve it something else, rate limit it or
- * refuse it has a right to be able to, and a `robots.txt` rule aimed at it has
- * to have a name to aim at.
+ * This traffic is a robot, run by a forum, on behalf of somebody who pasted a
+ * link, and a site that wants to rate limit or refuse it needs to be able to
+ * see that. A `robots.txt` rule aimed at it also has to have a name to aim at.
  */
 class SaysWhatItIsToTheSiteItFetchesTest extends TestCase
 {

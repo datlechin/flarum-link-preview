@@ -19,22 +19,14 @@ use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
- * The reported bug, from the server's side: an address is not always what the
- * link that led to it says.
+ * An address is not always what the link that led to it says.
  *
- * datlechin/flarum-link-clicks rewrites every tracked link's `href` to this
+ * datlechin/flarum-link-clicks rewrites a tracked link's `href` to this
  * forum's own `/lcc/track?u=` route, signed over a row id, so the destination
- * cannot be read back out of the address. Every link in a post then looked
- * internal and none of them got a card. The browser now recovers the
- * destination from the link's own text and asks for that, and the two addresses
- * involved have to be treated as the different things they are: the destination
- * is somebody else's site and gets fetched, the tracker route is this forum and
- * never does.
- *
- * The choice between them is made in the browser, where the anchor and the
- * classes core stamped on it are. This package ships no frontend test harness,
- * so what is covered here is the half that the server decides, which is also
- * the half that matters if a crafted request skips the browser entirely.
+ * cannot be read out of the address and every link in a post looks internal.
+ * The browser recovers it from the link's text and asks for that instead, so
+ * the two stay distinct: the destination is fetched, the tracker route is this
+ * forum and never is.
  */
 class PreviewsWhereTheLinkReallyGoesTest extends TestCase
 {
@@ -82,10 +74,8 @@ class PreviewsWhereTheLinkReallyGoesTest extends TestCase
     #[Test]
     public function a_destination_no_href_ever_named_is_previewed_at_that_destination(): void
     {
-        // What the browser now sends for a tracked link: the address out of the
-        // link's text, not the `/lcc/track?u=` route its `href` was rewritten
-        // to. Nothing about it is special by the time it arrives, which is the
-        // point.
+        // What the browser sends for a tracked link: the address out of the
+        // link's text, not the `/lcc/track?u=` route its `href` carries.
         $this->web->host('good.test', self::PUBLIC_ADDRESS)
             ->page('https://good.test/article', self::article());
 
@@ -100,10 +90,9 @@ class PreviewsWhereTheLinkReallyGoesTest extends TestCase
     #[Test]
     public function the_tracking_route_is_this_forum_and_is_never_fetched(): void
     {
-        // The `href` half of the same link. It is one of this forum's own
-        // addresses, so it is answered from here or not at all. Fetching it
-        // would have the forum wait on a request the same server has to serve,
-        // and would count a click nobody made.
+        // One of this forum's own addresses. Fetching it would have the forum
+        // wait on a request the same server has to serve, and would count a
+        // click nobody made.
         $this->web->host('good.test', self::PUBLIC_ADDRESS)
             ->page('https://good.test/article', self::article());
 
@@ -114,12 +103,10 @@ class PreviewsWhereTheLinkReallyGoesTest extends TestCase
     #[Test]
     public function an_address_on_this_forum_is_answered_about_this_forum_whatever_it_carries(): void
     {
-        // The abuse case, which the browser refuses by never asking: core marks
-        // a link the writer really did point here `UrlLink--internal`, so text
-        // naming another site under one of those is somebody writing
-        // `[https://evil.test](https://localhost/d/1)` to have a card for
-        // `evil.test` drawn from this forum's own link. Should such a request
-        // arrive anyway, the address decides and nothing else in it does.
+        // The abuse case: `[https://evil.test](https://localhost/d/1)` would
+        // draw a card for evil.test out of this forum's own link. Core marks a
+        // genuinely internal link `UrlLink--internal` so the browser never
+        // asks, but should the request arrive the address decides alone.
         $this->web->host('evil.test', self::PUBLIC_ADDRESS)
             ->page('https://evil.test/', self::article());
 

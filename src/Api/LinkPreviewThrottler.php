@@ -20,21 +20,17 @@ use Throwable;
 /**
  * A ceiling on how often one reader may ask this forum to fetch remote pages.
  *
- * The endpoint is open to guests, and every request it accepts can become an
+ * The endpoint is open to guests and every request it accepts can become an
  * outbound connection. The cache absorbs the ordinary case, so anyone reaching
- * this limit is asking for URLs nobody has asked for before, which is what an
- * attempt to use the forum as a scanner looks like.
- *
- * Set well above what reading costs: one page view is one batch request, and a
- * whole household or office can share an address.
+ * this limit is asking for URLs nobody has asked for before, which is what
+ * using the forum as a scanner looks like. Set well above what reading costs:
+ * one page view is one batch request, and an office shares an address.
  */
 final class LinkPreviewThrottler
 {
     public const MAX_REQUESTS_PER_MINUTE = 30;
 
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     private const ROUTES = ['datlechin-link-preview', 'datlechin-link-preview.batch'];
 
     private const WINDOW_SECONDS = 60;
@@ -44,10 +40,8 @@ final class LinkPreviewThrottler
     private const LOCK_PREFIX = 'datlechin-link-preview:throttle-lock:';
 
     /**
-     * How long the holder of the counting lock may keep it.
-     *
-     * Two cache operations need a fraction of this. It is a bound on how long
-     * a worker killed mid-count can shut its own address out, not a budget.
+     * A bound on how long a worker killed mid-count can shut its own address
+     * out, not a budget: two cache operations need a fraction of this.
      */
     private const LOCK_SECONDS = 5;
 
@@ -63,9 +57,8 @@ final class LinkPreviewThrottler
     public function __invoke(ServerRequestInterface $request): ?bool
     {
         if (! in_array($request->getAttribute('routeName'), self::ROUTES, true)) {
-            // Null rather than false: this throttler has no opinion about any
-            // other route, and false would exempt them from everybody else's
-            // throttles.
+            // Null rather than false: false would exempt other routes from
+            // everybody else's throttles.
             return null;
         }
 
@@ -75,25 +68,14 @@ final class LinkPreviewThrottler
     /**
      * Count this request and say whether it is one too many.
      *
-     * Reading the count and writing it back have to happen as one step, or the
-     * limit is one per arrival rather than one per minute: twenty requests
-     * landing together all read the same number and all write it back plus one,
-     * spending one request out of the budget instead of twenty, which is
-     * exactly the shape of traffic the limit exists for.
-     *
-     * `increment` is not that one step on the store Flarum installs.
-     * `Flarum\Foundation\InstalledSite::registerCache()` binds `cache.store` to
-     * `Illuminate\Cache\FileStore` unconditionally, and that class's
-     * `increment()` is a `getPayload()` followed by a `put()` with nothing held
-     * in between. Sixty processes asking at once against that store left the
-     * counter reading between three and six and let all sixty through, so the
-     * ceiling was not a ceiling. What FileStore does have is `add()`, which
-     * takes an exclusive `flock` on the entry, and `lock()`, which is built on
-     * `add()`. So the read and the write are done with that lock held, and the
-     * same sixty now cost exactly the thirty they should.
-     *
-     * A store that provides no lock is counted by {@see self::countWithoutALock()},
-     * where the count is exact only if that driver's own `increment` is atomic.
+     * The read and the write have to be one step, or twenty requests landing
+     * together all read the same number and cost one request out of the budget
+     * instead of twenty. `increment` is not that step on the store Flarum
+     * installs: `FileStore::increment()` is a `getPayload()` then a `put()`
+     * with nothing held in between, and sixty concurrent requests left that
+     * counter reading between three and six and let all sixty through. Its
+     * `lock()` is built on `add()`, which does take an exclusive `flock`, so
+     * the read and the write run under that.
      */
     private function exceeded(string $id): bool
     {
@@ -110,10 +92,9 @@ final class LinkPreviewThrottler
                 ->block(self::LOCK_WAIT_SECONDS, fn (): bool => $this->count($key));
         } catch (Throwable) {
             // A cache that is not answering cannot say how much this reader has
-            // already asked for, and a lock nobody could take inside the wait
-            // means this request went uncounted. An endpoint that makes
-            // outbound connections and has lost its only ceiling is worse than
-            // a card that does not load, so an unknown count is one too many.
+            // already asked for. An endpoint that makes outbound connections
+            // and has lost its only ceiling is worse than a card that does not
+            // load, so an unknown count is one too many.
             return true;
         }
 
@@ -126,9 +107,8 @@ final class LinkPreviewThrottler
      * The count itself, run with the reader's key held.
      *
      * The window is carried in the entry rather than left to the driver's own
-     * expiry. Writing the count back resets whatever lifetime the driver was
-     * keeping, so a reader who kept asking would otherwise push the window
-     * ahead of itself and never be let through again.
+     * expiry: writing the count back resets that lifetime, so a reader who kept
+     * asking would push the window ahead of itself and never get through again.
      */
     private function count(string $key): bool
     {
@@ -160,11 +140,10 @@ final class LinkPreviewThrottler
      * The best a store that provides no lock can do.
      *
      * `add` opens the window and `increment` answers the number this request
-     * is, which is the only number worth comparing: a value read separately is
-     * already stale by the time the comparison happens. Whether those two are
-     * one step is the driver's business and not something this class can make
-     * true, so on a driver whose `increment` is not atomic this undercounts a
-     * simultaneous burst. It is right on APCu, whose `apcu_inc` is.
+     * is, which is the only number worth comparing: one read separately is
+     * stale by the time it is compared. Whether those two are one step is the
+     * driver's business, so this undercounts a simultaneous burst where
+     * `increment` is not atomic. It is right on APCu, whose `apcu_inc` is.
      */
     private function countWithoutALock(string $key): bool
     {
@@ -178,8 +157,8 @@ final class LinkPreviewThrottler
             $this->cache->put($key, 1, self::WINDOW_SECONDS);
         }
 
-        // Any driver that answers something other than a number is in the same
-        // position: it is not counting, so it is not to be trusted with this.
+        // A driver that answers something other than a number is not counting,
+        // so it is not to be trusted with this.
         return ! is_int($count) || $count > self::MAX_REQUESTS_PER_MINUTE;
     }
 

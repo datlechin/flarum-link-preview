@@ -21,8 +21,7 @@ use PHPUnit\Framework\Attributes\Test;
  *
  * A real page says the same thing three or four times over, in Open Graph, in
  * Twitter cards, in a bare meta tag and in JSON-LD, and the copies disagree.
- * The order is fixed so that two readers who load the same link get the same
- * card, and so that a site that fills only its structured data still gets one.
+ * The order is fixed so two readers who load the same link get the same card.
  */
 class ReadsWhatAPageSaysAboutItselfTest extends TestCase
 {
@@ -81,9 +80,8 @@ class ReadsWhatAPageSaysAboutItselfTest extends TestCase
     #[Test]
     public function a_tag_with_no_content_does_not_win(): void
     {
-        // A content management system that emits the tag whether or not it has
-        // anything to put in it would otherwise blank the card for the sake of
-        // an empty string.
+        // A CMS that emits the tag whether or not it has anything to put in it
+        // would otherwise blank the card for the sake of an empty string.
         $metadata = $this->extract(<<<'HTML'
             <meta property="og:title" content="   ">
             <meta property="og:description" content="">

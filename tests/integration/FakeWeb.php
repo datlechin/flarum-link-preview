@@ -27,16 +27,12 @@ use Psr\Http\Message\RequestInterface;
 /**
  * The only internet these tests have.
  *
- * Both halves of the boundary are here on purpose. DNS decides whether an
- * address is allowed to be fetched and HTTP decides what comes back, and the
- * cases worth testing are exactly the ones where the two disagree: a
- * public-looking name that answers with a LAN address is impossible to arrange
- * against a real resolver and is the whole reason SafeFetcher checks addresses
- * rather than hostnames.
+ * DNS and HTTP are both here because the cases worth testing are the ones
+ * where they disagree: a public-looking name answering with a LAN address
+ * cannot be arranged against a real resolver.
  *
- * {@see $requested} is the proof of a negative. A test that says a URL was
- * refused before anything left the server can assert on it directly, rather
- * than hoping the absence of a network in CI stood in for the check.
+ * {@see $requested} is the proof of a negative, so a test asserting nothing
+ * left the server can check it rather than trusting CI to have no network.
  */
 final class FakeWeb implements ExtenderInterface, Resolver
 {
@@ -73,9 +69,8 @@ final class FakeWeb implements ExtenderInterface, Resolver
 
     /**
      * A hop, so a test can put the interesting address one move away from the
-     * one the reader pasted. Every rule the forum applies to a link has to
-     * survive being told to go somewhere else afterwards, and a redirect is the
-     * only way a stranger gets to choose the second address.
+     * one the reader pasted. A redirect is the only way a stranger gets to
+     * choose the second address, so every rule has to survive one.
      */
     public function redirect(string $from, string $to, int $status = 302): self
     {
@@ -121,10 +116,9 @@ final class FakeWeb implements ExtenderInterface, Resolver
             return Create::rejectionFor(new ConnectException("Nothing answers at $url.", $request));
         }
 
-        // A fresh response every time, because SafeFetcher reads the body as a
-        // stream and a batch can ask for one page twice. Handing back the same
-        // object would leave the second reader at end of file with an empty
-        // document and no way to tell why.
+        // A fresh response every time: SafeFetcher reads the body as a stream
+        // and a batch can ask for one page twice, so a shared object would
+        // leave the second reader at end of file with an empty document.
         return Create::promiseFor(new Response(
             $page['status'],
             $page['headers'],

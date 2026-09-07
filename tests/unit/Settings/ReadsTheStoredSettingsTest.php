@@ -21,9 +21,8 @@ use PHPUnit\Framework\Attributes\Test;
  * Settings arrive as strings and have to be used as numbers, flags and lists.
  *
  * A row saved through the admin page is a string whatever the extender
- * declared, and a forum that has never opened the page has no row at all.
- * Every read goes through here so that the two cases mean the same thing
- * everywhere rather than whatever the calling site happened to cast.
+ * declared, and a forum that never opened that page has no row at all. Every
+ * read goes through here so both cases mean the same thing everywhere.
  */
 class ReadsTheStoredSettingsTest extends TestCase
 {
@@ -171,11 +170,9 @@ class ReadsTheStoredSettingsTest extends TestCase
     #[Test]
     public function a_cap_of_zero_is_read_as_a_cap_of_one(): void
     {
-        // An administrator who clears the field or types a zero has asked for
-        // fewer previews, not for a forum where no link ever gets one. The
-        // browser reads this same number out of the forum payload, where
-        // `extend.php` sends it through the clamp below rather than raw, so a
-        // stored zero cannot mean one thing here and none at all there.
+        // Clearing the field or typing a zero asks for fewer previews, not for
+        // a forum where no link gets one. `extend.php` sends the same row
+        // through the clamp below, so a stored zero cannot mean two things.
         $this->assertSame(1, $this->config(['max_previews_per_post' => '0'])->maxPreviewsPerPost());
         $this->assertSame(1, $this->config(['max_previews_per_post' => 0])->maxPreviewsPerPost());
         $this->assertSame(1, $this->config(['max_previews_per_post' => '-3'])->maxPreviewsPerPost());

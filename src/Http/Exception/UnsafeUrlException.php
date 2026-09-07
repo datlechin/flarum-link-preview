@@ -12,11 +12,9 @@
 namespace Datlechin\LinkPreview\Http\Exception;
 
 /**
- * The URL is one the forum must not connect to at all.
- *
- * A scheme that is not http or https, a host with no address, or a host that
- * only resolves inside the network the forum is running in. Reported as
- * `unsafe_address`.
+ * The URL is one the forum must not connect to at all: a scheme that is not
+ * http or https, a host with no address, or a host that only resolves inside
+ * the network the forum is running in. Reported as `unsafe_address`.
  */
 final class UnsafeUrlException extends LinkPreviewException
 {
