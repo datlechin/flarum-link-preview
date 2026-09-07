@@ -1,6 +1,6 @@
 import LinkPreviewCard from '../components/LinkPreviewCard';
 import type { PreviewTarget } from './collectLinks';
-import { releasePreview, retainPreview } from './previewStore';
+import { loadPreview, previewFor, releasePreview, retainPreview } from './previewStore';
 
 /**
  * Every card on the page, and the undoing of it.
@@ -56,6 +56,13 @@ export function mountCard(target: PreviewTarget): void {
   retainPreview(url);
 
   m.mount(wrapper, { view: () => m(LinkPreviewCard, { link, url, internal }) });
+
+  // Asked for here as well as in the card, which can redraw itself but cannot
+  // take away the root it is mounted in. The load comes first so that the state
+  // read below is one the store has settled on rather than a stale failure it
+  // is already refetching.
+  loadPreview(url, () => dropFailed(wrapper, url));
+  dropFailed(wrapper, url);
 }
 
 export function sweepDetachedCards(): void {
@@ -72,16 +79,33 @@ export function unmountCardsWithin(root: ParentNode): void {
 /** Restores the plain links, so turning previews off does not need a reload. */
 export function removeCardsWithin(root: ParentNode): void {
   root.querySelectorAll<HTMLElement>('.LinkPreview-container').forEach((wrapper) => {
-    const card = mounted.get(wrapper);
-
-    unmount(wrapper);
-    wrapper.remove();
-
-    if (!card) return;
-
-    card.link.classList.remove('LinkPreview-source');
-    card.link.removeAttribute('data-link-preview');
+    takeDown(wrapper)?.link.removeAttribute('data-link-preview');
   });
+}
+
+/** A preview that failed shows nothing, so the link is given back as it was. */
+function dropFailed(wrapper: HTMLElement, url: string): void {
+  if (previewFor(url).status !== 'failed') return;
+
+  // The anchor keeps its `data-link-preview`. That mark is what stops
+  // `collectPreviewTargets` picking it up on the next `onupdate`, mounting a
+  // card against the remembered failure, and tearing it down again forever.
+  takeDown(wrapper);
+}
+
+/**
+ * Takes a card away and puts the anchor back on screen, leaving the caller to
+ * say whether the anchor may be collected again.
+ */
+function takeDown(wrapper: HTMLElement): Card | undefined {
+  const card = mounted.get(wrapper);
+
+  unmount(wrapper);
+  wrapper.remove();
+
+  card?.link.classList.remove('LinkPreview-source');
+
+  return card;
 }
 
 function unmount(wrapper: HTMLElement): void {

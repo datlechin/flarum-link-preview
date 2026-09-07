@@ -18,19 +18,20 @@ use Datlechin\LinkPreview\Html\Metadata;
  *
  * The three named constructors are the only shapes a response body can take, so
  * a half-filled preview has nowhere to come from: a card either describes a
- * page, describes a discussion, or says why neither happened.
+ * page elsewhere, describes something this forum holds, or says why neither
+ * happened.
+ *
+ * @phpstan-type MetaItem array{key: string, text: string}|array{key: string, count: int}|array{key: string, date: string}
  */
 final class Preview
 {
     private const TYPE_LINK = 'link';
 
-    private const TYPE_DISCUSSION = 'discussion';
-
     private const LAYOUT_COMPACT = 'compact';
 
     /**
      * @param  array{url: string, width: int|null, height: int|null}|null  $image
-     * @param  array{id: int, commentCount: int, author: string|null, createdAt: string, tags: list<array{name: string}>}|null  $discussion
+     * @param  list<MetaItem>  $meta
      */
     private function __construct(
         private readonly string $url,
@@ -42,7 +43,7 @@ final class Preview
         private readonly ?string $siteName = null,
         private readonly ?string $favicon = null,
         private readonly ?array $image = null,
-        private readonly ?array $discussion = null,
+        private readonly array $meta = [],
     ) {
     }
 
@@ -66,22 +67,36 @@ final class Preview
     }
 
     /**
-     * @param  array{id: int, commentCount: int, author: string|null, createdAt: string, tags: list<array{name: string}>}  $discussion
+     * A card for something this forum holds itself.
+     *
+     * Always compact: what these carry in place of a page's image is a short
+     * list of facts, and an avatar, the only image any of them has, is small by
+     * definition, so there is nothing to grow a large card around.
+     *
+     * @param  'discussion'|'user'|'tag'|'forum'  $type
+     * @param  list<MetaItem>  $meta
      */
-    public static function discussion(string $url, string $title, ?string $description, ?string $siteName, ?string $favicon, array $discussion): self
-    {
-        // Always compact: a discussion card carries reply and participant
-        // counts instead of an image, and there is no image to grow around.
+    public static function internal(
+        string $url,
+        string $type,
+        ?string $title,
+        ?string $description = null,
+        ?string $siteName = null,
+        ?string $favicon = null,
+        array $meta = [],
+        ?string $image = null,
+    ): self {
         return new self(
             url: $url,
             error: null,
-            type: self::TYPE_DISCUSSION,
+            type: $type,
             layout: self::LAYOUT_COMPACT,
             title: $title,
             description: $description,
             siteName: $siteName,
             favicon: $favicon,
-            discussion: $discussion,
+            image: $image === null ? null : ['url' => $image, 'width' => null, 'height' => null],
+            meta: $meta,
         );
     }
 
@@ -93,10 +108,9 @@ final class Preview
     /**
      * What is safe to hand back to the page that asked.
      *
-     * An error card puts this address on screen and links to it, so a `data:`
-     * or `javascript:` URL rejected for its scheme must not come back out of
-     * the endpoint wearing a link. Anything but http or https becomes empty,
-     * and the card renders without a link.
+     * A failure still echoes the address it was asked about, so a `data:` or
+     * `javascript:` URL rejected for its scheme must not come back out of the
+     * endpoint. Anything but http or https becomes empty.
      */
     private static function echoable(string $url): string
     {
@@ -104,7 +118,6 @@ final class Preview
 
         return is_string($scheme) && in_array(strtolower($scheme), ['http', 'https'], true) ? $url : '';
     }
-
 
     /**
      * @return array<string, mixed>
@@ -129,8 +142,8 @@ final class Preview
             'image' => $this->image,
         ];
 
-        if ($this->discussion !== null) {
-            $data['discussion'] = $this->discussion;
+        if ($this->meta !== []) {
+            $data['meta'] = $this->meta;
         }
 
         return $data;

@@ -1,5 +1,5 @@
 export type PreviewLayout = 'large' | 'compact';
-export type PreviewType = 'link' | 'discussion';
+export type PreviewType = 'link' | 'discussion' | 'user' | 'tag' | 'forum';
 
 export interface PreviewImage {
   url: string;
@@ -7,13 +7,14 @@ export interface PreviewImage {
   height: number | null;
 }
 
-export interface DiscussionInfo {
-  id: number;
-  commentCount: number;
-  author: string | null;
-  createdAt: string;
-  tags: Array<{ name: string }>;
-}
+/**
+ * One entry in the card's info row, in the order the server meant it read.
+ *
+ * `key` names a locale string under `datlechin-link-preview.forum.meta`, except
+ * for the two shapes that carry their own text or their own formatting. Three
+ * shapes and no more, so one renderer serves every type of card.
+ */
+export type MetaItem = { key: string; text: string } | { key: string; count: number } | { key: string; date: string };
 
 export interface PreviewSuccess {
   url: string;
@@ -24,7 +25,7 @@ export interface PreviewSuccess {
   siteName: string | null;
   favicon: string | null;
   image: PreviewImage | null;
-  discussion?: DiscussionInfo;
+  meta?: MetaItem[];
 }
 
 export interface PreviewFailure {

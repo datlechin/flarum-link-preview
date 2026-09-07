@@ -11,6 +11,7 @@
 
 namespace Datlechin\LinkPreview\Tests\integration;
 
+use Carbon\Carbon;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -73,6 +74,48 @@ trait PreviewsLinks
         $body = json_decode((string) $response->getBody(), true);
 
         return is_array($body) && is_array($body['data'] ?? null) ? $body['data'] : [];
+    }
+
+    /**
+     * The facts listed under a card's title.
+     *
+     * Absent and empty are the same answer: the field is optional, and a card
+     * with nothing to list is free to leave it out or send it empty.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<array<string, mixed>>
+     */
+    protected function meta(array $data): array
+    {
+        $meta = $data['meta'] ?? [];
+
+        return is_array($meta) ? array_values($meta) : [];
+    }
+
+    /**
+     * Asserts a date meta item names the given moment, whichever ISO 8601
+     * spelling of it the server chose.
+     */
+    protected function assertSameInstant(string $expected, mixed $actual, string $message = ''): void
+    {
+        $this->assertIsString($actual, $message);
+        $this->assertSame(
+            Carbon::parse($expected)->toAtomString(),
+            Carbon::parse($actual)->toAtomString(),
+            $message
+        );
+    }
+
+    /**
+     * Takes a permission away from every group that was granted it, which is
+     * how a forum hides what a guest or a member may not see.
+     *
+     * Runs before anything reads a permission, since the first read fills a
+     * cache that a later delete leaves standing.
+     */
+    protected function revokePermission(string $permission): void
+    {
+        $this->database()->table('group_permission')->where('permission', $permission)->delete();
     }
 
     /**

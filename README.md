@@ -26,9 +26,9 @@ Needs Flarum 2.0 and PHP 8.2.
 
 Only a pasted address, meaning the link's text is the address itself. `[the docs](https://example.com)` keeps the words you wrote.
 
-Left alone: mentions, quotes and code, media files if you ask, links past the per-post limit, and anything your lists rule out.
+Left alone: mentions, quotes and code, media files if you ask, links past the per-post limit, and anything your lists rule out. A preview that cannot be built is left alone too: no card, no message, just the link as it was written.
 
-A link to a discussion here gets a card built from the database, not fetched, showing its title, author and reply count. Readers only see discussions they could already open. It has to be alone on its line; inside a sentence Flarum's own `#12` label is better.
+A link back to this forum gets a card built from the database, not fetched: a discussion, a member, a tag, or the index itself. Readers only see what they could already open. It has to be alone on its line; inside a sentence Flarum's own `#12` label is better.
 
 Members can turn previews off for themselves in their settings.
 

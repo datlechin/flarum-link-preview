@@ -37,6 +37,7 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
 
         $this->extension('datlechin-link-preview');
         $this->isolateTheNetwork();
+        $this->setting('forum_title', 'The Cast Iron Club');
 
         $this->prepareDatabase([
             'users' => [$this->normalUser()],
@@ -98,12 +99,30 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
         $this->assertSame('compact', $data['layout']);
         $this->assertSame('Ways to season a cast iron pan', $data['title']);
         $this->assertStringContainsString('Rub it with oil', (string) $data['description']);
+        $this->assertSame('The Cast Iron Club', $data['siteName']);
         $this->assertNull($data['image']);
+    }
 
-        $this->assertSame(1, $data['discussion']['id']);
-        $this->assertSame(4, $data['discussion']['commentCount']);
-        $this->assertSame('normal', $data['discussion']['author']);
-        $this->assertSame([], $data['discussion']['tags'], 'the tags extension is not enabled here');
+    #[Test]
+    public function what_the_card_lists_arrives_as_meta(): void
+    {
+        // One list for every internal type, so the browser renders all of them
+        // through one component rather than one per kind of page.
+        $meta = $this->meta($this->data($this->preview('http://localhost/d/1')));
+
+        $this->assertCount(3, $meta, 'no tags here: the tags extension is not enabled');
+        $this->assertSame(['key' => 'author', 'text' => 'normal'], $meta[0]);
+        $this->assertSame(['key' => 'replies', 'count' => 3], $meta[1], 'four comments is three replies');
+        $this->assertSame('created', $meta[2]['key']);
+        $this->assertSameInstant('2026-01-01 00:00:00', $meta[2]['date']);
+    }
+
+    #[Test]
+    public function the_discussion_object_the_card_used_to_carry_is_gone(): void
+    {
+        $data = $this->data($this->preview('http://localhost/d/1'));
+
+        $this->assertArrayNotHasKey('discussion', $data);
     }
 
     #[Test]
@@ -112,7 +131,7 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
         $data = $this->data($this->preview('http://localhost/d/1-ways-to-season-a-cast-iron-pan/3'));
 
         $this->assertSame('discussion', $data['type']);
-        $this->assertSame(1, $data['discussion']['id']);
+        $this->assertSame('Ways to season a cast iron pan', $data['title']);
     }
 
     #[Test]
@@ -147,11 +166,12 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
     }
 
     #[Test]
-    public function an_internal_address_that_is_not_a_discussion_has_no_metadata(): void
+    public function a_discussion_address_carrying_something_that_is_not_an_id_has_no_metadata(): void
     {
         // Never fetched either: the forum answers for its own addresses or it
         // answers with nothing.
-        $this->assertSame('no_metadata', $this->data($this->preview('http://localhost/u/normal'))['error']);
+        $this->assertSame('no_metadata', $this->data($this->preview('http://localhost/d/twelve'))['error']);
+        $this->assertSame('no_metadata', $this->data($this->preview('http://localhost/d/'))['error']);
         $this->assertSame([], $this->web->requested);
     }
 

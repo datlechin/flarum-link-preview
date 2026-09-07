@@ -26,9 +26,9 @@ datlechin-link-preview:
 
       preview_internal_links_label: Preview links to this forum
       preview_internal_links_help: >
-        A discussion link on a line of its own becomes a card. Read from the
-        database, so nothing is fetched and nobody sees more than they could
-        already open.
+        A link here to a discussion, member, tag or the index becomes a card
+        read from the database, so nothing is fetched and nobody sees more than
+        they could already open.
 
       skip_media_links_label: Skip links to media files
       skip_media_links_help: For links ending in an image, audio or video file, which Flarum already renders.
@@ -55,23 +55,17 @@ datlechin-link-preview:
   forum:
 
     loading: Loading preview
-    replies: "{count, plural, one {# reply} other {# replies}}"
+
+    # The facts a card built from the database lists under its title. Only the
+    # counted ones need a string: the rest carry their own text or a date.
+    meta:
+      replies: "{count, plural, one {# reply} other {# replies}}"
+      posts: "{count, plural, one {# post} other {# posts}}"
+      discussions: "{count, plural, one {# discussion} other {# discussions}}"
 
     # Shown only when something on the forum is counting clicks. Both the number
     # and the decision that it is worth showing come from that extension.
     clicks: "{count, plural, one {# click} other {# clicks}}"
-
-    # Shown in place of the card when there is nothing to show. Short, and
-    # about the link rather than about whoever posted it.
-    errors:
-      invalid_url: This address cannot be previewed.
-      blocked: Previews are turned off for this site.
-      unsafe_address: This address could not be reached safely.
-      unreachable: This site did not respond.
-      http_error: This page could not be opened.
-      not_previewable: There is no page here to preview.
-      no_metadata: This page offers nothing to preview.
-      unknown: No preview available.
 
     settings:
       hide_link_previews_label: Hide link previews

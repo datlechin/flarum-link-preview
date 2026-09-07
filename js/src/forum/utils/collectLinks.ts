@@ -16,9 +16,10 @@ export interface PreviewTarget {
  * Which links in a post are worth a card, and where the card goes.
  *
  * Only a bare address qualifies: words the writer chose are what they wanted
- * read. A link back at this forum is the exception, since core has replaced its
- * text with a `#123` label that a card can improve on, and only when the
- * discussion link stands alone in its paragraph.
+ * read. A link back at this forum must also lead to one of the pages the server
+ * will describe, and a discussion is the exception to the bare address rule,
+ * since core has already replaced its text with a `#123` label that a card can
+ * improve on.
  *
  * All of it is decided against the address the link actually leads to, which
  * `destinationOf` recovers first, because the `href` is no longer reliably it.
@@ -105,12 +106,16 @@ function targetFor(link: HTMLAnchorElement, postBody: HTMLElement, skipMedia: bo
   if (internal) {
     if (!internalAllowed) return null;
 
-    // Everything else on this forum keeps whatever core made of it: a profile
-    // or tag page has no card worth showing, and a discussion link inside a
-    // sentence is already a readable label.
-    if (!link.matches(DISCUSSION) || !alone) return null;
+    // Any other page of this forum keeps whatever core made of it, because the
+    // server has nothing to say about it and would answer with a failure.
+    if (!isPreviewableRoute(destination)) return null;
 
-    return { link, url, internal, block, mode: 'replace' };
+    // Core replaced this link's text with a `#123` label, so the address test
+    // below cannot be asked of it, and inside a sentence that label already
+    // reads better than a card would.
+    if (link.matches(DISCUSSION)) {
+      return alone ? { link, url, internal, block, mode: 'replace' } : null;
+    }
   }
 
   if (link.matches(DISCUSSION) || !textIsTheAddress(link, destination)) return null;
@@ -203,6 +208,31 @@ function isInternal(url: URL): boolean {
   if (base && url.pathname !== base && !url.pathname.startsWith(base + '/')) return false;
 
   return true;
+}
+
+/**
+ * Whether this address is one of the forum's own pages the server will describe.
+ *
+ * The shapes have to agree with `InternalPreviewer`, which is what actually
+ * answers. Anything outside them is left alone here rather than sent off to come
+ * back a failure.
+ */
+function isPreviewableRoute(url: URL): boolean {
+  const base = basePath();
+
+  // `isInternal` has already established that the base path is there in full.
+  const path = trimSlash(base === '' ? url.pathname : url.pathname.slice(base.length));
+
+  // The index describes the forum. `/tags` does not: a card there could only be
+  // titled with the forum's own name, which says less than the address it
+  // replaced.
+  if (path === '') return true;
+
+  // A position that is not a post number keeps its address, the same call core
+  // makes when it decides whether to label a discussion link.
+  if (/^\/d\/\d+(?:-[^/]*)?(?:\/\d+)?$/.test(path)) return true;
+
+  return /^\/u\/[^/]+$/.test(path) || /^\/t\/[^/]+$/.test(path);
 }
 
 function basePath(): string {

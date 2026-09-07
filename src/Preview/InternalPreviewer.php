@@ -11,8 +11,10 @@
 
 namespace Datlechin\LinkPreview\Preview;
 
+use Flarum\Database\AbstractModel;
 use Flarum\Discussion\Discussion;
 use Flarum\Extension\ExtensionManager;
+use Flarum\Http\SlugManager;
 use Flarum\Http\UrlGenerator;
 use Flarum\Post\CommentPost;
 use Flarum\Settings\SettingsRepositoryInterface;
@@ -20,6 +22,7 @@ use Flarum\Tags\Tag;
 use Flarum\User\User;
 use Illuminate\Contracts\Filesystem\Cloud;
 use Illuminate\Contracts\Filesystem\Factory;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use s9e\TextFormatter\Utils;
 
 /**
@@ -27,10 +30,13 @@ use s9e\TextFormatter\Utils;
  *
  * Answered from the database, never over the network: on a single worker the
  * fetch would wait on the request serving it, and carrying no session it would
- * show a guest a discussion they cannot read. The address shape recognised here
- * must match core's `parseDiscussionUrl()` and `labelDiscussionLinks.ts`.
+ * show a guest a discussion they cannot read. The address shapes recognised
+ * here are the routes core and the tags extension register, and every lookup
+ * is scoped to the reader, so a card never says more than its page would.
+ *
+ * @phpstan-import-type MetaItem from Preview
  */
-final class DiscussionPreviewer
+final class InternalPreviewer
 {
     private const MAX_DESCRIPTION_LENGTH = 400;
 
@@ -48,6 +54,8 @@ final class DiscussionPreviewer
     public function __construct(
         private UrlGenerator $url,
         private SettingsRepositoryInterface $settings,
+        private SlugManager $slugs,
+        private ExtensionManager $extensions,
     ) {
     }
 
@@ -76,42 +84,157 @@ final class DiscussionPreviewer
 
     public function preview(string $url, User $actor): ?Preview
     {
-        $id = $this->discussionId($url);
+        $path = $this->path($url);
 
-        if ($id === null) {
+        if ($path === null) {
             return null;
         }
 
+        if ($path === '') {
+            return $this->forum($url);
+        }
+
+        if (preg_match('~^/d/(\d+)(?:-[^/]*)?(?:/([^/]*))?$~', $path, $matches) === 1) {
+            // `/d/1/near-something` and other positions that are not a post
+            // number keep their address, the same call core makes when
+            // labelling links.
+            $near = $matches[2] ?? '';
+
+            return $near === '' || ctype_digit($near)
+                ? $this->discussion($url, (int) $matches[1], $actor)
+                : null;
+        }
+
+        if (preg_match('~^/u/([^/]+)$~', $path, $matches) === 1) {
+            return $this->user($url, $matches[1], $actor);
+        }
+
+        // A tag route only exists when the tags extension does.
+        if (preg_match('~^/t/([^/]+)$~', $path, $matches) === 1) {
+            return $this->extensions->isEnabled('flarum-tags')
+                ? $this->tag($url, $matches[1], $actor)
+                : null;
+        }
+
+        return null;
+    }
+
+    private function discussion(string $url, int $id, User $actor): ?Preview
+    {
         $discussion = Discussion::whereVisibleTo($actor)->find($id);
 
         if (! $discussion instanceof Discussion) {
             return null;
         }
 
-        return Preview::discussion(
-            $url,
-            $discussion->title,
-            $this->excerpt($discussion, $actor),
-            $this->forumTitle(),
-            $this->faviconUrl(),
-            [
-                'id' => $discussion->id,
-                'commentCount' => $discussion->comment_count,
-                'author' => $discussion->user?->username,
-                'createdAt' => $discussion->created_at->toAtomString(),
-                'tags' => $this->tags($discussion, $actor),
-            ],
+        /** @var list<MetaItem> $meta */
+        $meta = [];
+
+        foreach ($this->tagNames($discussion, $actor) as $name) {
+            $meta[] = ['key' => 'tag', 'text' => $name];
+        }
+
+        $author = $discussion->user?->username;
+
+        if ($author !== null) {
+            $meta[] = ['key' => 'author', 'text' => $author];
+        }
+
+        // The count includes the opening post, which is not a reply to itself.
+        $meta[] = ['key' => 'replies', 'count' => max(0, $discussion->comment_count - 1)];
+        $meta[] = ['key' => 'created', 'date' => $discussion->created_at->toAtomString()];
+
+        return Preview::internal(
+            url: $url,
+            type: 'discussion',
+            title: $discussion->title,
+            description: $this->excerpt($discussion, $actor),
+            siteName: self::text($this->settings->get('forum_title')),
+            favicon: $this->faviconUrl(),
+            meta: $meta,
         );
     }
 
-    private function discussionId(string $url): ?int
+    /**
+     * No description: a bio is not a core field. It arrives with an extension
+     * of its own, which owns the rule for who may read one, and guessing that
+     * rule here is how a card ends up saying more than the profile would.
+     */
+    private function user(string $url, string $slug, User $actor): ?Preview
     {
-        $path = parse_url($url, PHP_URL_PATH);
+        $user = $this->fromSlug(User::class, $slug, $actor);
 
-        if (! is_string($path)) {
+        if (! $user instanceof User) {
             return null;
         }
 
+        /** @var list<MetaItem> $meta */
+        $meta = [['key' => 'posts', 'count' => $user->comment_count]];
+
+        if ($user->joined_at !== null) {
+            $meta[] = ['key' => 'joined', 'date' => $user->joined_at->toAtomString()];
+        }
+
+        return Preview::internal(
+            url: $url,
+            type: 'user',
+            title: $user->display_name,
+            siteName: self::text($this->settings->get('forum_title')),
+            favicon: $this->faviconUrl(),
+            meta: $meta,
+            image: $user->avatar_url,
+        );
+    }
+
+    private function tag(string $url, string $slug, User $actor): ?Preview
+    {
+        $tag = $this->fromSlug(Tag::class, $slug, $actor);
+
+        if (! $tag instanceof Tag) {
+            return null;
+        }
+
+        return Preview::internal(
+            url: $url,
+            type: 'tag',
+            title: $tag->name,
+            description: self::text($tag->description),
+            siteName: self::text($this->settings->get('forum_title')),
+            favicon: $this->faviconUrl(),
+            meta: [['key' => 'discussions', 'count' => $tag->discussion_count]],
+        );
+    }
+
+    /**
+     * The index carries the host rather than the forum title as its site name,
+     * because the title is already the card's own heading.
+     */
+    private function forum(string $url): Preview
+    {
+        return Preview::internal(
+            url: $url,
+            type: 'forum',
+            title: self::text($this->settings->get('forum_title')),
+            description: self::text($this->settings->get('forum_description')),
+            siteName: $this->origin()['host'],
+            favicon: $this->faviconUrl(),
+        );
+    }
+
+    /**
+     * What this forum would route, with the install's base path taken off and
+     * any trailing slash normalised away. Null when the address is not under
+     * that base path at all.
+     */
+    private function path(string $url): ?string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+
+        if ($path === false) {
+            return null;
+        }
+
+        $path = is_string($path) ? $path : '';
         $base = $this->origin()['path'];
 
         // A forum installed at example.com/forum does not own example.com/d/1,
@@ -125,19 +248,27 @@ final class DiscussionPreviewer
             $path = substr($path, strlen($base));
         }
 
-        if (! preg_match('~^/d/(\d+)(?:-[^/]*)?(?:/([^/]*))?/?$~', $path, $matches)) {
+        return rtrim($path, '/');
+    }
+
+    /**
+     * The model this forum's own routes would resolve the slug to, read through
+     * the configured driver rather than by column: a forum set to id slugs
+     * writes `/u/5`, which a query by username would never find. Every driver
+     * scopes to the actor and raises when there is nothing they may see.
+     *
+     * @template T of AbstractModel
+     *
+     * @param  class-string<T>  $resource
+     * @return T|null
+     */
+    private function fromSlug(string $resource, string $slug, User $actor): ?AbstractModel
+    {
+        try {
+            return $this->slugs->forResource($resource)->fromSlug($slug, $actor);
+        } catch (ModelNotFoundException) {
             return null;
         }
-
-        // `/d/1/near-something` and other positions that are not a post number
-        // keep their address, the same call core makes when labelling links.
-        $near = $matches[2] ?? '';
-
-        if ($near !== '' && ! ctype_digit($near)) {
-            return null;
-        }
-
-        return (int) $matches[1];
     }
 
     private function excerpt(Discussion $discussion, User $actor): ?string
@@ -166,20 +297,17 @@ final class DiscussionPreviewer
     }
 
     /**
-     * @return list<array{name: string}>
+     * @return list<string>
      */
-    private function tags(Discussion $discussion, User $actor): array
+    private function tagNames(Discussion $discussion, User $actor): array
     {
-        /** @var ExtensionManager $extensions */
-        $extensions = resolve(ExtensionManager::class);
-
         // The relation, the table and the model all belong to an extension the
         // forum may not have turned on.
-        if (! $extensions->isEnabled('flarum-tags')) {
+        if (! $this->extensions->isEnabled('flarum-tags')) {
             return [];
         }
 
-        $tags = [];
+        $names = [];
 
         // Scoped rather than read off the discussion, so a tag the actor may
         // not see does not arrive on a card as a name.
@@ -190,17 +318,19 @@ final class DiscussionPreviewer
 
         /** @var Tag $tag */
         foreach ($query->get(['tags.name']) as $tag) {
-            $tags[] = ['name' => $tag->name];
+            $names[] = $tag->name;
         }
 
-        return $tags;
+        return $names;
     }
 
-    private function forumTitle(): ?string
+    /**
+     * Missing and blank are the same thing to a card: the field is not there,
+     * rather than there and empty.
+     */
+    private static function text(mixed $value): ?string
     {
-        $title = $this->settings->get('forum_title');
-
-        return is_string($title) && $title !== '' ? $title : null;
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     /**

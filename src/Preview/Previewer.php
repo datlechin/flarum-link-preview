@@ -40,7 +40,7 @@ final class Previewer
         private Config $config,
         private SafeFetcher $fetcher,
         private MetadataExtractor $extractor,
-        private DiscussionPreviewer $discussions,
+        private InternalPreviewer $internal,
         private Repository $cache,
     ) {
     }
@@ -119,7 +119,7 @@ final class Previewer
             return Preview::error($url, PreviewError::Blocked);
         }
 
-        if ($this->discussions->isInternal($url)) {
+        if ($this->internal->isInternal($url)) {
             // The browser skips these already; this answers the page still on
             // an older bundle, and refuses rather than fetching, because a
             // forum reading its own pages can wait on the worker serving it.
@@ -128,7 +128,7 @@ final class Previewer
             }
 
             // Not cached: what it is allowed to say depends on who is asking.
-            return $this->discussions->preview($url, $actor)
+            return $this->internal->preview($url, $actor)
                 ?? Preview::error($url, PreviewError::NoMetadata);
         }
 

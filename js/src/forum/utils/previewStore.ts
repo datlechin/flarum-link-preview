@@ -25,7 +25,7 @@ const FLUSH_DELAY = 50;
  */
 const FLUSH_TIMEOUT = 30000;
 
-/** For a failure the server never got to name. `errors.unknown` renders it. */
+/** For a failure the server never got to name. */
 const UNKNOWN = 'unknown';
 
 const LOADING: PreviewState = { status: 'loading' };
@@ -63,9 +63,12 @@ export function loadPreview(url: string, onChange: () => void): void {
 
   if (entry && entry.expires > Date.now()) return;
 
-  // The stale entry is left in place so a post redrawn after the TTL keeps
+  // A stale success is left in place so a post redrawn after the TTL keeps
   // showing its card while the replacement is fetched, rather than blinking
-  // back to a skeleton.
+  // back to a skeleton. A stale failure has no card to keep, and left here it
+  // would read as settled and take the new card down before the answer lands.
+  if (entry?.state.status === 'failed') entries.delete(url);
+
   pending.set(url, new Set([onChange]));
   queue.push(url);
 
@@ -187,7 +190,7 @@ async function sendOne(url: string): Promise<void> {
 }
 
 /**
- * A failure is already drawn as a failed card, and core's alert fires per
+ * A failure leaves the link alone and says nothing, and core's alert fires per
  * request, so a post full of dead links would stack banners over the forum.
  */
 function quietly(): void {}

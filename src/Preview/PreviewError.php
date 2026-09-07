@@ -14,9 +14,9 @@ namespace Datlechin\LinkPreview\Preview;
 /**
  * Why a preview could not be produced.
  *
- * A code rather than a sentence: the wording is chosen in the reader's browser,
- * and a failure cached with a translation already in it would hand every later
- * reader the first reader's language.
+ * Nothing renders these: a link whose preview fails keeps the plain link it
+ * already was. They are what an administrator reads off the API to tell a
+ * blocked host from an unreachable one.
  */
 enum PreviewError: string
 {

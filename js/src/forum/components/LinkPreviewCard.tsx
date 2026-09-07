@@ -8,10 +8,8 @@ import humanTime from 'flarum/common/helpers/humanTime';
 import listItems from 'flarum/common/helpers/listItems';
 import ItemList from 'flarum/common/utils/ItemList';
 import type Mithril from 'mithril';
-import type { PreviewLayout, PreviewSuccess } from '../../common/types';
+import type { MetaItem, PreviewLayout, PreviewSuccess } from '../../common/types';
 import { loadPreview, previewFor } from '../utils/previewStore';
-
-const KNOWN_ERRORS = ['invalid_url', 'blocked', 'unsafe_address', 'unreachable', 'http_error', 'not_previewable', 'no_metadata'];
 
 // Must match `Metadata::layout()`, which picks `large` from these same numbers.
 // Different values here render one image two ways depending on whether its page
@@ -57,15 +55,13 @@ export default class LinkPreviewCard extends Component<LinkPreviewCardAttrs> {
   view(): Mithril.Children {
     const state = previewFor(this.attrs.url);
 
-    if (state.status === 'loading') {
-      return this.viewLoading();
+    if (state.status === 'ready') {
+      return this.viewReady(state.data);
     }
 
-    if (state.status === 'failed') {
-      return this.viewFailed(state.code);
-    }
-
-    return this.viewReady(state.data);
+    // A failed preview leaves the link as it was, and `cardRegistry` takes the
+    // card down as the store settles. This is the frame in between.
+    return state.status === 'loading' ? this.viewLoading() : null;
   }
 
   protected viewLoading(): Mithril.Children {
@@ -76,23 +72,6 @@ export default class LinkPreviewCard extends Component<LinkPreviewCardAttrs> {
         <div className="LinkPreview-body">
           <div className="fakeText" />
           <div className="fakeText" />
-        </div>
-      </a>
-    );
-  }
-
-  protected viewFailed(code: string): Mithril.Children {
-    const key = KNOWN_ERRORS.includes(code) ? code : 'unknown';
-    const message = app.translator.trans(`datlechin-link-preview.forum.errors.${key}`);
-    const host = this.host();
-
-    // No `aria-label`: the text inside the anchor is already the accessible
-    // name, and a label would replace it rather than add to it.
-    return (
-      <a {...this.anchorAttrs(['LinkPreview--compact', 'LinkPreview--failed'])}>
-        <div className="LinkPreview-body">
-          <ul className="LinkPreview-info">{listItems(this.infoItems(null, host, host).toArray())}</ul>
-          <div className="LinkPreview-excerpt">{message}</div>
         </div>
       </a>
     );
@@ -146,11 +125,10 @@ export default class LinkPreviewCard extends Component<LinkPreviewCardAttrs> {
    * Everything the card says about the link other than its title and its
    * description. An `ItemList` so another extension can add to the row.
    */
-  protected infoItems(data: PreviewSuccess | null, siteName: string, host: string): ItemList<Mithril.Children> {
-    // Every item is a vnode. A bare string reaches Mithril boxed by
-    // `ItemList.toArray()` and is taken for a component. `trans()` happens to
-    // return an array today, which survives, but only while every translation
-    // of these keys keeps its placeholder.
+  protected infoItems(data: PreviewSuccess, siteName: string, host: string): ItemList<Mithril.Children> {
+    // Every item is a vnode. `ItemList.toArray()` boxes a primitive so it can
+    // hang `itemName` off it, `listItems` puts that box in the `<li>`, and
+    // Mithril takes the object for a component and reads `.view` off undefined.
     const items = new ItemList<Mithril.Children>();
 
     items.add(
@@ -164,48 +142,36 @@ export default class LinkPreviewCard extends Component<LinkPreviewCardAttrs> {
 
     const clicks = this.clickCount();
 
-    // Beside the site, ahead of the items that belong to the discussion rather
-    // than to the link.
+    // Beside the site, ahead of the items that belong to the page rather than
+    // to the link.
     if (clicks !== null) {
       items.add('clicks', <span>{app.translator.trans('datlechin-link-preview.forum.clicks', { count: clicks })}</span>, 95);
     }
 
-    const discussion = data?.discussion;
-
-    if (!discussion) {
-      return items;
-    }
-
-    // Name only: core paints a tag's colour as a background with
-    // `--contrast-color` over it, so as text here nothing guarantees it reads.
-    //
-    // Wrapped, and it has to be. `ItemList.toArray()` boxes a primitive so it
-    // can hang `itemName` off it, `listItems` puts that box in the `<li>`, and
-    // Mithril sees an object, takes it for a component and reads `.view` off
-    // undefined. Every other item here is already a vnode or a translator
-    // array, which is why this was the only one that threw.
-    for (const [index, tag] of discussion.tags.entries()) {
-      items.add(`tag${index}`, <span>{plain(tag.name)}</span>, 90 - index);
-    }
-
-    if (discussion.author) {
-      items.add('author', <span className="username">{plain(discussion.author)}</span>, 80);
-    }
-
-    // `commentCount` counts the opening post as well.
-    items.add(
-      'replies',
-      <span>{app.translator.trans('datlechin-link-preview.forum.replies', { count: Math.max(0, discussion.commentCount - 1) })}</span>,
-      70
-    );
-
-    items.add('createdAt', humanTime(new Date(discussion.createdAt)), 60);
+    // Descending priorities, so the order the server sent survives the sort.
+    data.meta?.forEach((item, index) => {
+      items.add(`meta${index}`, this.viewMeta(item), 90 - index);
+    });
 
     return items;
   }
 
-  protected viewFavicon(data: PreviewSuccess | null, host: string): Mithril.Children {
-    const src = data ? this.faviconUrl(data, host) : null;
+  /** Whatever the server had to say about this page, in the shape it said it. */
+  protected viewMeta(item: MetaItem): Mithril.Children {
+    if ('text' in item) {
+      // `username` is core's class for a name, and what the stylesheet weights.
+      return <span className={item.key === 'author' ? 'username' : undefined}>{plain(item.text)}</span>;
+    }
+
+    if ('count' in item) {
+      return <span>{app.translator.trans(`datlechin-link-preview.forum.meta.${item.key}`, { count: item.count })}</span>;
+    }
+
+    return humanTime(new Date(item.date));
+  }
+
+  protected viewFavicon(data: PreviewSuccess, host: string): Mithril.Children {
+    const src = this.faviconUrl(data, host);
 
     if (!src) {
       return <Icon name="fas fa-link" className="LinkPreview-favicon" />;
