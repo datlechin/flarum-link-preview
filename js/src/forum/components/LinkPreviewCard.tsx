@@ -269,7 +269,38 @@ export default class LinkPreviewCard extends Component<LinkPreviewCardAttrs> {
       target: internal || !this.setting('openLinksInNewTab', true) ? '_self' : '_blank',
       className: classList('LinkPreview', modifiers, this.sourceClasses(internal && this.hrefReachesDestination(href))),
       'aria-label': label,
+      onclick: (event: MouseEvent) => this.routeSamePage(event),
     };
+  }
+
+  /**
+   * Route a click on a card that points at the address already open.
+   *
+   * Core's `routeInternalLinks()` returns early on a link whose address is
+   * byte-identical to the current one, so that an anchor jump on the page still
+   * works, and the browser then reloads the whole application to arrive where
+   * the reader already is. A card carries no fragment, so there is nothing for
+   * the browser to jump to.
+   *
+   * Routing anyway is what the reader asked for, and core does the rest:
+   * `DiscussionPageResolver.onmatch` notices the destination is the discussion
+   * already open and scrolls the stream to the post the address names, or to
+   * the first one.
+   */
+  protected routeSamePage(event: MouseEvent): void {
+    // Anything but a plain left click is the reader asking for a new tab or a
+    // menu, and the browser does those better.
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.defaultPrevented) {
+      return;
+    }
+
+    const anchor = event.currentTarget as HTMLAnchorElement;
+
+    if (anchor.href !== window.location.href) return;
+
+    event.preventDefault();
+
+    m.route.set(anchor.pathname + anchor.search + anchor.hash);
   }
 
   /**
