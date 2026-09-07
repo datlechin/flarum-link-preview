@@ -1,0 +1,14 @@
+includes:
+  - vendor/flarum/phpstan/extension.neon
+
+parameters:
+  # Above the level 6 the skeleton ships and the level flarum/phpstan targets.
+  # Almost everything here starts as `mixed`: a decoded JSON-LD blob, a DOM
+  # node list, a setting read out of the database. Level 6 checks none of the
+  # calls made on those, which is exactly where this extension gets things
+  # wrong.
+  level: 9
+  paths:
+    - extend.php
+    - src
+  databaseMigrationsPath: ['migrations']

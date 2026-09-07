@@ -1,111 +1,221 @@
-@keyframes linkPreviewFadeIn {
-  from { opacity: 0.7; }
-  to { opacity: 1; }
+// A link preview card. The colours, chrome, type scale, loading placeholder
+// and focus ring are all core's; only the block is ours.
+
+// The anchor the card stands in for, hidden rather than removed so that
+// turning previews off restores the plain link without a reload.
+//
+// Qualified to beat core's `.UrlLink--discussion`, which in `replace` mode is
+// this same anchor and whose `display: inline-flex` is the same specificity.
+.Post-body .LinkPreview-source {
+  display: none;
 }
 
-.LinkPreview {
-  background: var(--button-bg);
-  color: var(--button-color);
-  padding: 5px 10px;
-  display: flex;
-  border-radius: var(--border-radius);
-  margin-top: 5px;
-  transition: background-color 0.2s ease;
+// The element is a `span`, because a `div` inside the `p` a post is usually
+// made of is invalid nesting, so it has to be told to behave as a block.
+.LinkPreview-container {
+  display: block;
+  max-width: 100%;
+  // What `.Post-body` gives a paragraph, a list or a blockquote.
+  margin: 1em 0;
+}
 
-  &:hover {
+// The box core gives a `blockquote` inside a post.
+.LinkPreview {
+  display: flex;
+  max-width: 100%;
+  overflow: hidden;
+  background: var(--control-bg);
+  color: var(--control-color);
+  border-radius: var(--border-radius);
+  text-decoration: none;
+
+  .add-keyboard-focus-ring();
+
+  &:hover,
+  &:focus {
+    background: var(--control-bg-shaded);
+    // `a` is `.text-link()`, which would underline the whole anchor; the title
+    // below carries the underline instead.
+    text-decoration: none;
+
+    .LinkPreview-title {
+      color: var(--link-color);
+      text-decoration: underline;
+    }
+  }
+}
+
+// `.Post-body a` underlines and bolds links in running text at (0,1,1).
+// Matched here at (0,2,0) so the card opts out without `!important`.
+.Post-body .LinkPreview {
+  border-bottom: 0;
+  font-weight: normal;
+}
+
+.LinkPreview--compact {
+  align-items: center;
+  gap: 15px;
+  padding: 8px 15px;
+}
+
+.LinkPreview--large {
+  flex-direction: column;
+}
+
+.LinkPreview-media {
+  flex-shrink: 0;
+  overflow: hidden;
+  // Behind an image with transparency, and while one is still loading.
+  background: var(--body-bg);
+}
+
+.LinkPreview--large .LinkPreview-media {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+}
+
+// Sized to the two lines of text it stands beside; core has no thumbnail of
+// this kind to take a measurement from.
+.LinkPreview--compact .LinkPreview-media {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--border-radius);
+
+  @media @phone {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+.LinkPreview-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.LinkPreview-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.LinkPreview--large .LinkPreview-body {
+  padding: 8px 15px;
+}
+
+// `DiscussionListItem-info` does this same job in core, at this size and
+// colour. Qualified for the margin: `.Post-body ul` sets `margin-bottom: 1em`
+// at (0,1,1) and would out-specify a bare class, floating the row a line above
+// the title.
+.LinkPreview .LinkPreview-info {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted-more-color);
+
+  > li {
+    display: inline;
+  }
+
+  > li + li {
+    margin-left: 8px;
+  }
+
+  // `.username` carries no styling of its own in core.
+  .username {
+    font-weight: bold;
+  }
+}
+
+.LinkPreview-site {
+  // One line, without letting a long host push the rest of the list out.
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  vertical-align: bottom;
+}
+
+.LinkPreview-favicon {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+}
+
+.LinkPreview-siteName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// `DiscussionListItem-title`, clamped to two lines rather than ellipsised
+// because a card has the room a list row does not.
+.LinkPreview-title {
+  margin: 3px 0 0;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--heading-color);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// `DiscussionListItem-info .item-excerpt`, to the value. The colour is stated
+// rather than inherited: core's excerpt is a child of the info list, this one
+// is its sibling and would otherwise read at full strength.
+.LinkPreview-excerpt {
+  color: var(--muted-more-color);
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5em;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// `.fakeText` and `blink` are core's, from `forum/PostStream.less`.
+.LinkPreview--loading {
+  animation: blink 1s linear infinite;
+
+  // Core paints `.fakeText` in `--control-bg`, which vanishes on a card
+  // already painted that, so the bars take the shade instead.
+  .fakeText {
+    background: var(--control-bg-shaded);
+    margin-bottom: 0;
+
+    & + .fakeText {
+      margin-top: 8px;
+      width: 60%;
+    }
+  }
+
+  // A placeholder is not a thing to press yet.
+  &:hover,
+  &:focus {
     background: var(--control-bg);
   }
+}
 
-  a {
-    border-bottom: none;
-  }
 
-  &--loading {
-    opacity: 0.7;
-  }
-
-  &--loaded {
-    animation: linkPreviewFadeIn 0.3s ease;
-  }
-
-  &--error {
-    opacity: 0.6;
-  }
-
-  &-image {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 60px;
-    flex-shrink: 0;
-    padding: 5px 0;
-
-    @media @phone {
-      width: 50px;
-    }
-
-    img {
-      width: 100%;
-      height: 60px;
-      object-fit: cover;
-      border-radius: calc(var(--border-radius) - 2px);
-
-      @media @phone {
-        height: 50px;
-      }
-    }
-  }
-
-  &-main {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-  }
-
-  &-image + &-main {
-    margin-left: 15px;
-  }
-
-  &-title {
-    font-size: 15px;
-    font-weight: bold;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &-description {
-    font-size: 12px;
-    color: var(--button-color);
-    margin-bottom: 5px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-
-    &--error {
-      color: var(--error-color, #d9534f);
-      font-style: italic;
-    }
-  }
-
-  &-domain {
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-
-    a {
-      color: var(--muted-more-color);
-    }
-    img, i {
-      width: 14px;
-      margin-right: 5px;
+// With no title, the hover rule above has nothing to land on, so the site name
+// takes the underline instead.
+.LinkPreview:not(:has(.LinkPreview-title)) {
+  &:hover,
+  &:focus {
+    .LinkPreview-siteName {
+      color: var(--link-color);
+      text-decoration: underline;
     }
   }
 }
 
-.LinkPreview-captured {
-  display: none !important;
+// Qualified because the fallback is the `<i>` core's `Icon` renders, where
+// `object-fit` and `border-radius` mean nothing.
+img.LinkPreview-favicon {
+  object-fit: contain;
+  border-radius: 2px;
 }
