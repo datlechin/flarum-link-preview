@@ -18,6 +18,10 @@ jobs:
       enable_prettier: true
       enable_typescript: true
 
+      # Off by default in the reusable workflow, so a package with tests has to
+      # say so or they are built and never run.
+      enable_tests: true
+
       # `typescript-coverage-report` has not been released for TypeScript 5,
       # which the rest of the toolchain needs.
       type_coverage_script: ''

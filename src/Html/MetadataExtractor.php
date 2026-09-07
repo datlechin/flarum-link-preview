@@ -20,13 +20,6 @@ use InvalidArgumentException;
 use Psr\Http\Message\UriInterface;
 use ValueError;
 
-/**
- * Turns a page's markup into a {@see Metadata}.
- *
- * Takes the HTML as a string and the URL it came from: no network, so it tests
- * against a fixture, and the relative paths pages put in `og:image` resolve
- * against that base.
- */
 final class MetadataExtractor
 {
     public const MAX_TITLE_LENGTH = 200;
@@ -34,15 +27,14 @@ final class MetadataExtractor
     public const MAX_DESCRIPTION_LENGTH = 400;
 
     /**
-     * How far into the document a charset declaration is still believed.
-     * Browsers stop looking after roughly a kilobyte of head.
+     * Browsers stop believing a charset declaration after roughly a kilobyte
+     * of head.
      */
     private const CHARSET_SNIFF_BYTES = 2048;
 
     /**
-     * A `@graph` inside a `@graph` inside a list is already further than any
-     * real page goes. The bound keeps a hostile document from turning one
-     * script tag into unbounded recursion.
+     * Keeps a hostile document from turning one script tag into unbounded
+     * recursion.
      */
     private const MAX_JSON_LD_DEPTH = 4;
 
@@ -98,11 +90,6 @@ final class MetadataExtractor
         );
     }
 
-    /**
-     * A Shift_JIS or ISO-8859-1 page handed straight to the parser comes back
-     * as mojibake, which is worse than no preview: it gets cached and shown as
-     * if it were the site's own words.
-     */
     private function toUtf8(string $html, ?string $contentType): string
     {
         $charset = $this->detectCharset($html, $contentType);
@@ -110,9 +97,8 @@ final class MetadataExtractor
         try {
             $converted = mb_convert_encoding($html, 'UTF-8', $charset);
         } catch (ValueError) {
-            // A charset nobody has heard of says nothing about the bytes, so
-            // fall through to the UTF-8 pass, which still replaces any
-            // sequence the parser would choke on.
+            // UTF-8 to UTF-8 is not a no-op: it replaces any sequence the
+            // parser would choke on.
             $converted = mb_convert_encoding($html, 'UTF-8', 'UTF-8');
         }
 
@@ -142,8 +128,7 @@ final class MetadataExtractor
             return null;
         }
 
-        // Process-wide switch, so it is restored: the rest of the request is
-        // entitled to see its own libxml errors.
+        // Process-wide switch, so it is restored.
         $previous = libxml_use_internal_errors(true);
 
         $document = new DOMDocument();
@@ -158,9 +143,7 @@ final class MetadataExtractor
     /**
      * The bytes are UTF-8 by this point, but libxml still reads the page's own
      * charset declaration and would decode them a second time as whatever the
-     * origin claimed. Every declaration is pointed at UTF-8, and one of ours
-     * leads the document for pages that declare nothing, which libxml would
-     * otherwise read as ISO-8859-1.
+     * origin claimed. A page that declares nothing it reads as ISO-8859-1.
      */
     private function declareUtf8(string $html): string
     {
@@ -171,10 +154,6 @@ final class MetadataExtractor
     }
 
     /**
-     * Keyed by `property` or `name`, first occurrence winning, which is what
-     * crawlers do with the duplicated Open Graph blocks that content
-     * management systems emit.
-     *
      * @return array<string, string>
      */
     private function metaTags(DOMXPath $xpath): array
@@ -255,11 +234,7 @@ final class MetadataExtractor
     }
 
     /**
-     * How good a candidate a `rel` value is, lower being better.
-     *
-     * `apple-touch-icon` ranks last of the named three because it is a launcher
-     * tile: often 180px of padded artwork, where the plain `icon` is the mark
-     * the site actually uses next to its name.
+     * Lower is a better candidate; `null` is not an icon at all.
      */
     private function faviconRank(string $rel): ?int
     {
@@ -287,10 +262,6 @@ final class MetadataExtractor
     }
 
     /**
-     * Every JSON-LD node, flattened out of the lists and `@graph` wrappers
-     * sites bury them in. Malformed JSON is skipped rather than raised: one
-     * broken analytics blob must not cost the page its preview.
-     *
      * @return list<array<array-key, mixed>>
      */
     private function jsonLd(DOMXPath $xpath): array
@@ -439,9 +410,8 @@ final class MetadataExtractor
     }
 
     /**
-     * An absolute `http`/`https` URL, or nothing. Anything that does not
-     * resolve to the web is dropped here rather than shipped for the frontend
-     * to hide: `data:` and `javascript:` have no business in a card.
+     * `data:` and `javascript:` are dropped here rather than shipped for the
+     * frontend to hide.
      */
     private function resolveUrl(?string $value, ?UriInterface $base): ?string
     {
@@ -493,9 +463,6 @@ final class MetadataExtractor
 
         $decoded = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        // The non-breaking space is collapsed with the rest: it arrives as
-        // `&nbsp;` in a great many titles and is invisible once decoded, so a
-        // run of them reads as a gap the card cannot explain.
         $text = trim((string) preg_replace('/[\s\x{00a0}\x{200b}\x{feff}]+/u', ' ', $decoded));
 
         return $text === '' ? null : $this->truncate($text, $limit);
@@ -510,7 +477,6 @@ final class MetadataExtractor
         $cut = mb_substr($text, 0, $limit - 1);
         $boundary = mb_strrpos($cut, ' ');
 
-        // Only cut at a word boundary with a word's worth of text before it.
         // Japanese and Chinese do not space their words, so a single early
         // space would otherwise throw the whole description away.
         if ($boundary !== false && $boundary >= intdiv($limit, 2)) {

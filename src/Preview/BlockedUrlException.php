@@ -13,12 +13,6 @@ namespace Datlechin\LinkPreview\Preview;
 
 use Datlechin\LinkPreview\Http\Exception\LinkPreviewException;
 
-/**
- * A hop the forum's own lists refuse. Reported as `blocked`.
- *
- * A `LinkPreviewException` because that is how a refusal gets attributed to the
- * URL that was asked for, instead of taking the rest of the batch down with it.
- */
 final class BlockedUrlException extends LinkPreviewException
 {
 }

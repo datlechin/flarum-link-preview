@@ -8,14 +8,8 @@ import type Mithril from 'mithril';
 
 import { NUMBER_BOUNDS, SETTING, settingKey, trans, transText } from '../config';
 
-/** Anything `buildSettingComponent` accepts beyond what `field()` derives from a name. */
 type FieldOptions = { type: string; [attr: string]: unknown };
 
-/**
- * The extension's settings, grouped. Core renders registered settings as one
- * flat column, which gives no sign that two of these decide which links the
- * other seven ever get to describe.
- */
 export default class LinkPreviewSettingsPage extends ExtensionPage {
   content() {
     return (
@@ -23,13 +17,9 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
         <div className="container">
           <Form>
             {this.settingSections().toArray()}
-            {/* Both buttons live in the `content()` this page replaces, so
-                they are built here from the methods core builds them with. */}
             <div className="Form-group Form-controls">
               {this.submitButton()}
               {this.resetButton(
-                // Core's default reads the `settingLabels` that `field()` fills,
-                // so the modal lists settings by name rather than by key.
                 undefined,
                 app.translator.trans(
                   'core.admin.extension.reset_settings.title_extension',
@@ -52,16 +42,13 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
     return super.saveSettings(e);
   }
 
-  /**
-   * Nothing enforces `min` on a number input and an emptied one saves as an
-   * empty row, while the server clamps both back into range on every read. The
-   * field would otherwise show a number the forum ignores.
-   */
+  // Nothing enforces `min` on a number input and an emptied one saves as an
+  // empty row, while the server clamps both back into range on every read.
   protected clampNumber(name: string): void {
     const { min, fallback } = NUMBER_BOUNDS[name];
     const setting = this.setting(settingKey(name));
-    // A setting nobody has saved yet arrives from the payload as the number
-    // the extender declared, not as a string.
+    // A setting nobody has saved yet arrives as the number the extender
+    // declared, not as a string.
     const raw = String(setting() ?? '').trim();
     const clamped = raw === '' || !Number.isFinite(Number(raw)) ? fallback : Math.max(min, Math.trunc(Number(raw)));
 
@@ -72,11 +59,9 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
     }
   }
 
-  /**
-   * `buildSettingComponent` records nothing about what it built, so the label
-   * is registered alongside the stream; otherwise the reset modal lists these
-   * settings by their storage keys.
-   */
+  // `buildSettingComponent` records nothing about what it built, so the label is
+  // registered alongside the stream; otherwise the reset modal lists these
+  // settings by their storage keys.
   protected field(name: string, options: FieldOptions): Mithril.Children {
     const key = settingKey(name);
     const label = trans(`settings.${name}_label`);
@@ -93,14 +78,9 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
     });
   }
 
-  /**
-   * An `ItemList` so another extension can slot a section of its own between
-   * these, which is the only way into a page that draws its own fields.
-   *
-   * `FieldSet--form` on every section: without it core spaces fieldset items
-   * 5px apart and label to help text 10px, so each help text sits closer to
-   * the next field than to the one it describes.
-   */
+  // `FieldSet--form` on every section: without it core spaces fieldset items 5px
+  // apart and label to help text 10px, so each help text sits closer to the next
+  // field than to the one it describes.
   settingSections(): ItemList<Mithril.Children> {
     const items = new ItemList<Mithril.Children>();
 

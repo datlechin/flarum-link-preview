@@ -9,8 +9,7 @@ export default [
     // anything added through `.setting()` here would never reach the screen.
     .page(LinkPreviewSettingsPage)
 
-    // Settings registered through `.setting()` reach the admin search box on
-    // their own; ones a page draws itself have to be listed.
+    // A page that draws its own fields has to list them for the admin search.
     .generalIndexItems('settings', () =>
       Object.values(SETTING).map((name) => ({
         id: settingKey(name),

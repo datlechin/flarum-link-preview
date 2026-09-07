@@ -12,12 +12,9 @@
 namespace Datlechin\LinkPreview\Preview;
 
 /**
- * Decides whether an address is one the forum is willing to fetch.
- *
  * An entry names a host, optionally a path prefix, anchored at both ends; a `*`
  * cannot cross a dot inside the host, so `*.example.com` covers one site's
- * subdomains, not every address that contains it. No network and no container:
- * one list must always give one answer, or filter and cached preview disagree.
+ * subdomains, not every address that contains it.
  */
 final class UrlFilter
 {
@@ -69,8 +66,8 @@ final class UrlFilter
         $bare = $rule['path'] === '';
 
         // A bare host covers itself and everything under it, so blocking
-        // `example.com` does not leave `cdn.example.com` fetchable. A rule
-        // carrying a path is not that shorthand and stops at the host it names.
+        // `example.com` does not leave `cdn.example.com` fetchable. A rule with
+        // a path is not that shorthand and stops at the host it names.
         $host = ($bare ? '(?:.+\.)?' : '').self::hostPattern($rule['host']);
 
         if (! preg_match('~^'.$host.'$~', $target['host'])) {
@@ -97,10 +94,8 @@ final class UrlFilter
     }
 
     /**
-     * Reduce an address and a rule to the same vocabulary, so that
-     * `https://www.example.com/` and `example.com` compare equal. The browser
-     * side normalises by these same rules, so a link it drops without asking is
-     * one this would have refused anyway.
+     * The browser side normalises by these same rules, so a link it drops
+     * without asking is one this would have refused anyway.
      *
      * @return array{host: string, path: string}
      */
@@ -124,9 +119,6 @@ final class UrlFilter
 
         return [
             'host' => preg_replace('~^www\.~', '', $host) ?? $host,
-            // A query and a fragment are not part of what a rule names, and
-            // paths are compared in one case so that an administrator does not
-            // have to guess which one a link will arrive in.
             'path' => is_string($path) ? strtolower(rtrim($path, '/')) : '',
         ];
     }

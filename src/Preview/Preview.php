@@ -14,13 +14,6 @@ namespace Datlechin\LinkPreview\Preview;
 use Datlechin\LinkPreview\Html\Metadata;
 
 /**
- * One card's worth of data, on its way to the browser.
- *
- * The three named constructors are the only shapes a response body can take, so
- * a half-filled preview has nowhere to come from: a card either describes a
- * page elsewhere, describes something this forum holds, or says why neither
- * happened.
- *
  * @phpstan-type MetaItem array{key: string, text: string}|array{key: string, count: int}|array{key: string, date: string}
  */
 final class Preview
@@ -67,12 +60,6 @@ final class Preview
     }
 
     /**
-     * A card for something this forum holds itself.
-     *
-     * Always compact: what these carry in place of a page's image is a short
-     * list of facts, and an avatar, the only image any of them has, is small by
-     * definition, so there is nothing to grow a large card around.
-     *
      * @param  'discussion'|'user'|'tag'|'forum'  $type
      * @param  list<MetaItem>  $meta
      */
@@ -106,11 +93,9 @@ final class Preview
     }
 
     /**
-     * What is safe to hand back to the page that asked.
-     *
      * A failure still echoes the address it was asked about, so a `data:` or
      * `javascript:` URL rejected for its scheme must not come back out of the
-     * endpoint. Anything but http or https becomes empty.
+     * endpoint.
      */
     private static function echoable(string $url): string
     {

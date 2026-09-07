@@ -4,7 +4,7 @@
 
 Paste a link in a post and it becomes a card with the page's title, description and image. Your forum reads the page itself, so nothing is sent to a third party.
 
-![A post with three link preview cards](.github/screenshot-forum.png)
+![A post with three link preview cards](screenshots/forum.png)
 
 ## Install
 
@@ -34,7 +34,7 @@ Members can turn previews off for themselves in their settings.
 
 ## Settings
 
-![The settings page](.github/screenshot-admin.png)
+![The settings page](screenshots/admin.png)
 
 The two lists take one entry per line or separated by commas:
 

@@ -22,14 +22,6 @@ use Datlechin\LinkPreview\Settings\Config;
 use Flarum\User\User;
 use Illuminate\Cache\Repository;
 
-/**
- * Turns addresses into cards.
- *
- * Anything decidable without the network is decided first; what is left goes
- * out in one call, so a post with six links costs the slowest of the six rather
- * than the sum. Failures are cached as well as successes, for less time, so one
- * dead domain does not cost every reader a fresh connect timeout.
- */
 final class Previewer
 {
     private const CACHE_PREFIX = 'datlechin-link-preview:v2:';
@@ -105,10 +97,6 @@ final class Previewer
         return $previews;
     }
 
-    /**
-     * The answer if one can be had without opening a socket; null when the URL
-     * still needs fetching, which is what the caller batches.
-     */
     private function settle(string $url, User $actor): ?Preview
     {
         if (filter_var($url, FILTER_VALIDATE_URL) === false || ! self::isHttp($url)) {
@@ -120,9 +108,6 @@ final class Previewer
         }
 
         if ($this->internal->isInternal($url)) {
-            // The browser skips these already; this answers the page still on
-            // an older bundle, and refuses rather than fetching, because a
-            // forum reading its own pages can wait on the worker serving it.
             if (! $this->config->previewInternalLinks()) {
                 return Preview::error($url, PreviewError::NotPreviewable);
             }
@@ -137,9 +122,8 @@ final class Previewer
 
     private function fromResult(string $url, FetchResult $result): Preview
     {
-        // Backstop, not the rule: the hop was checked before it was requested,
-        // but a fetcher that ignored the guard still must not turn a
-        // blocklisted host into a card.
+        // Backstop: the hop was checked before it was requested, but a fetcher
+        // that ignored the guard must not turn a blocklisted host into a card.
         if (! $this->filter()->allows($result->effectiveUrl)) {
             return $this->fail($url, PreviewError::Blocked);
         }
@@ -177,9 +161,8 @@ final class Previewer
     }
 
     /**
-     * Whether the site answered and the answer was a refusal. The status rides
-     * on the exception's code, which a failure that never got an answer leaves
-     * at zero.
+     * The status rides on the exception's code, which a failure that never got
+     * an answer leaves at zero.
      */
     private static function answered(?LinkPreviewException $exception): bool
     {
@@ -189,9 +172,8 @@ final class Previewer
     }
 
     /**
-     * The check the fetcher runs before it opens each connection. It refuses by
-     * throwing, because a throw carries the reason back out of a batch attached
-     * to the URL that was asked for, rather than ending the whole round.
+     * Refuses by throwing, never by returning false: a throw carries the reason
+     * out of a batch attached to the URL that was asked for.
      *
      * @return callable(string): bool
      */
@@ -240,9 +222,8 @@ final class Previewer
     }
 
     /**
-     * Rebuild a preview from what the cache holds. Every field is checked on
-     * the way back in: entries outlive deploys, and one written to an older
-     * shape has to read as a miss rather than fatal on somebody's page load.
+     * Entries outlive deploys, so an entry written to an older shape has to
+     * read as a miss rather than fatal on somebody's page load.
      */
     private static function decode(mixed $entry): ?Preview
     {
@@ -301,9 +282,8 @@ final class Previewer
     }
 
     /**
-     * The form in which two links to the same page are the same link. Keeps the
-     * scheme, or `http://example.com` and `https://example.com` share one entry
-     * and hand each other's readers the wrong card.
+     * Keeps the scheme, or `http://example.com` and `https://example.com` share
+     * one cache entry and hand each other's readers the wrong card.
      */
     private static function canonical(string $url): string
     {

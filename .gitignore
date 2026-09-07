@@ -10,5 +10,6 @@ tests/.phpunit.result.cache
 .vagrant
 .idea/*
 .vscode
+.phpactor.json
 js/coverage-ts
 js/dist-typings

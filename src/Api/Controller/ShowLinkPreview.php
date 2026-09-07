@@ -20,17 +20,9 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * A preview of one link, for a reader looking at a post that contains it.
- *
- * A POST for what is plainly a read: a GET is reachable from any page on the
- * web with nothing more than an `<img src>`, so every visitor to an attacker's
- * page would become an outbound connection from this forum to an address of
- * the attacker's choosing, at their rate. A POST carrying a JSON body needs a
- * preflight this forum does not answer cross site.
- *
- * No permission check. The preview says no more than the page already tells
- * any visitor; SafeFetcher's address checks, the throttler and the cache are
- * what keep the endpoint from being an open proxy.
+ * No permission check: a preview says no more than the page already tells any
+ * visitor. What keeps the endpoint from being an open proxy is SafeFetcher's
+ * address checks, the throttler and the cache.
  */
 final class ShowLinkPreview implements RequestHandlerInterface
 {
@@ -43,9 +35,6 @@ final class ShowLinkPreview implements RequestHandlerInterface
         $body = $request->getParsedBody();
         $url = is_array($body) ? ($body['url'] ?? null) : null;
 
-        // A malformed request is the caller's mistake and gets a 400. A URL
-        // that simply cannot be previewed is not: that comes back as an
-        // ordinary, cacheable answer carrying an error code.
         if (! is_string($url)) {
             throw new InvalidParameterException('url must be a string');
         }

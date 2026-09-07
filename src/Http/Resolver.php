@@ -11,17 +11,10 @@
 
 namespace Datlechin\LinkPreview\Http;
 
-/**
- * Turns a host into the addresses it points at.
- *
- * An interface so a test can hand back 127.0.0.1 for a public-looking hostname,
- * the DNS rebinding case {@see SafeFetcher} must reject and the one case that
- * cannot be arranged against the real resolver.
- */
 interface Resolver
 {
     /**
-     * @return list<string> IP addresses, empty when the host does not resolve
+     * @return list<string> empty when the host does not resolve
      */
     public function resolve(string $host): array;
 }

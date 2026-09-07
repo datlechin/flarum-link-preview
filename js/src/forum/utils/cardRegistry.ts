@@ -3,18 +3,12 @@ import type { PreviewTarget } from './collectLinks';
 import { loadPreview, previewFor, releasePreview, retainPreview } from './previewStore';
 
 /**
- * Every card on the page, and the undoing of it.
- *
- * A card is a Mithril root mounted into post HTML Mithril does not own.
- * `m.mount` subscribes the target and never unsubscribes it, so a discarded
- * root is redrawn for the life of the tab, and one edited character replaces
- * the whole `.Post-body` subtree, core rendering it from `m.trust(contentHtml)`
- * which Mithril diffs by string compare. Hence three defences: the sweep, the
- * removal hook, and `m.mount(wrapper, null)` in both, the only call that
- * actually cancels the subscription.
+ * `m.mount` subscribes its target and never unsubscribes it, so a discarded root is
+ * redrawn for the life of the tab, and one edited character replaces the whole
+ * `.Post-body` subtree, which core renders from `m.trust(contentHtml)`. Hence the
+ * sweep, the removal hook, and `m.mount(wrapper, null)`, the only call that cancels.
  */
 
-/** What has to be put back if the card is taken away again. */
 interface Card {
   link: HTMLAnchorElement;
   url: string;
@@ -25,23 +19,18 @@ const mounted = new Map<HTMLElement, Card>();
 export function mountCard(target: PreviewTarget): void {
   const { link, url, internal, block, mode } = target;
 
-  // Marked first, so a redraw landing mid-mount cannot collect this anchor
-  // again. `collectPreviewTargets` skips anchors carrying the attribute, which
-  // is what keeps the pass idempotent across `onupdate`.
+  // Marked first, so a redraw landing mid-mount cannot collect this anchor again.
   link.setAttribute('data-link-preview', '');
 
   const wrapper = document.createElement('span');
 
-  // A `<span>` because the wrapper often lands inside a `<p>`, where a `<div>`
-  // makes the browser close the paragraph. The stylesheet gives it `display: block`.
+  // A `<span>` because the wrapper often lands inside a `<p>`, where a `<div>` makes
+  // the browser close the paragraph. The stylesheet gives it `display: block`.
   wrapper.className = 'LinkPreview-container';
   wrapper.setAttribute('data-link-preview', '');
 
-  // Always inside a block of the post, never a sibling of a top level child of
-  // `.Post-body`: Mithril removes exactly as many top level nodes as
-  // `m.trust(contentHtml)` produced, so one extra there and it removes the
-  // wrong ones, stranding a mounted root in a detached subtree the
-  // `isConnected` sweep can never see.
+  // Never a sibling of a top level child of `.Post-body`: Mithril removes exactly as many
+  // top level nodes as `m.trust(contentHtml)` produced, and one extra makes it remove the wrong ones.
   if (mode === 'replace') {
     link.classList.add('LinkPreview-source');
     link.before(wrapper);
@@ -51,16 +40,13 @@ export function mountCard(target: PreviewTarget): void {
 
   mounted.set(wrapper, { link, url });
 
-  // Held while the card is on screen so the store cannot evict the answer it is
-  // drawn from and strand it in a skeleton.
   retainPreview(url);
 
   m.mount(wrapper, { view: () => m(LinkPreviewCard, { link, url, internal }) });
 
-  // Asked for here as well as in the card, which can redraw itself but cannot
-  // take away the root it is mounted in. The load comes first so that the state
-  // read below is one the store has settled on rather than a stale failure it
-  // is already refetching.
+  // The card can redraw itself but cannot take away the root it is mounted in.
+  // Subscribed first, then asked once, because a preview already in the store
+  // settles before the callback is ever registered.
   loadPreview(url, () => dropFailed(wrapper, url));
   dropFailed(wrapper, url);
 }
@@ -76,27 +62,21 @@ export function unmountCardsWithin(root: ParentNode): void {
   root.querySelectorAll<HTMLElement>('.LinkPreview-container').forEach(unmount);
 }
 
-/** Restores the plain links, so turning previews off does not need a reload. */
+/** Unlike `unmountCardsWithin`, gives the anchors back for collecting, so previews can be turned off live. */
 export function removeCardsWithin(root: ParentNode): void {
   root.querySelectorAll<HTMLElement>('.LinkPreview-container').forEach((wrapper) => {
     takeDown(wrapper)?.link.removeAttribute('data-link-preview');
   });
 }
 
-/** A preview that failed shows nothing, so the link is given back as it was. */
 function dropFailed(wrapper: HTMLElement, url: string): void {
   if (previewFor(url).status !== 'failed') return;
 
-  // The anchor keeps its `data-link-preview`. That mark is what stops
-  // `collectPreviewTargets` picking it up on the next `onupdate`, mounting a
-  // card against the remembered failure, and tearing it down again forever.
+  // The anchor keeps its `data-link-preview`, which is what stops the next `onupdate`
+  // mounting a card against the remembered failure and tearing it down again forever.
   takeDown(wrapper);
 }
 
-/**
- * Takes a card away and puts the anchor back on screen, leaving the caller to
- * say whether the anchor may be collected again.
- */
 function takeDown(wrapper: HTMLElement): Card | undefined {
   const card = mounted.get(wrapper);
 

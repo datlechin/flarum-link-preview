@@ -12,21 +12,15 @@
 namespace Datlechin\LinkPreview\Html;
 
 /**
- * What a page said about itself, once the markup has been thrown away.
- *
- * Every value is already cleaned and absolute, or `null`: a caller never has to
- * decode entities or resolve a relative image URL.
+ * Every value is already cleaned and absolute, or `null`.
  */
 final class Metadata
 {
-    /**
-     * Below this the image is too small to fill a card, whatever its shape.
-     */
     private const LARGE_MIN_WIDTH = 600;
 
     /**
      * Outside this band an image cropped to the large card's 2:1 frame loses
-     * the part that mattered, so it is better shown small and whole.
+     * the part that mattered.
      */
     private const LARGE_MIN_RATIO = 1.2;
 
@@ -52,11 +46,8 @@ final class Metadata
     }
 
     /**
-     * The card shape the server is asking for.
-     *
      * Unknown dimensions mean `compact` rather than a guess: the browser knows
-     * the natural size once the image loads and upgrades the card there,
-     * whereas a large card holding a 16x16 sprite is a hole in the post.
+     * the natural size once the image loads and upgrades the card there.
      */
     public function layout(): string
     {

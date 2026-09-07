@@ -21,12 +21,6 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Every preview one page needs, in one request.
- *
- * Asking together lets SafeFetcher run the fetches concurrently, and lets the
- * throttler count a page view as the one request it really is.
- */
 final class ShowLinkPreviewBatch implements RequestHandlerInterface
 {
     public function __construct(private Previewer $previewer)
@@ -52,15 +46,12 @@ final class ShowLinkPreviewBatch implements RequestHandlerInterface
             $previews,
         );
 
-        // Cast, because an empty map encodes as `[]` and the client looks
-        // every preview up by the URL it asked for.
+        // Cast: an empty map encodes as `[]`, and the client looks every
+        // preview up by the URL it asked for.
         return new JsonResponse(['data' => (object) $data]);
     }
 
     /**
-     * Anything past the cap is dropped rather than refused: a long post is a
-     * reason to preview less of it, not a reason to show the reader an error.
-     *
      * @param  array<mixed>  $urls
      * @return list<string>
      */

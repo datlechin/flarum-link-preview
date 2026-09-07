@@ -14,12 +14,9 @@ namespace Datlechin\LinkPreview\Http\Exception;
 use RuntimeException;
 
 /**
- * Base for every reason a preview could not be fetched.
- *
- * One subclass per {@see \Datlechin\LinkPreview\Preview\PreviewError} case.
- * Messages are for the log only: letting one reach a response body would tell
- * an SSRF probe whether a host resolved, refused the connection or answered
- * with the wrong content type.
+ * Messages are for the log only: one in a response body would tell an SSRF
+ * probe whether a host resolved, refused the connection or answered with the
+ * wrong content type.
  */
 abstract class LinkPreviewException extends RuntimeException
 {

@@ -3,11 +3,8 @@ import app from 'flarum/forum/app';
 import type { PreviewData, PreviewState } from '../../common/types';
 
 /**
- * One request per URL, however many cards are asking for it.
- *
- * Every card mounts on its own, so deduplication cannot live in the component.
- * Requests are held briefly to turn a page load into one batch, and remembered
- * afterwards so scrolling back to a post does not ask again.
+ * One request per URL, however many cards are asking for it: every card mounts as
+ * its own root, so deduplication cannot live in the component.
  */
 
 const TTL = 5 * 60 * 1000;
@@ -18,14 +15,10 @@ const MAX_BATCH_SIZE = 20;
 
 const FLUSH_DELAY = 50;
 
-/**
- * How long a batch may hold the queue before it moves on without it. Well past
- * the server's eight second fetch timeout, so this is a last resort rather than
- * a second deadline.
- */
+// Well past the server's eight second fetch timeout, so this is a last resort
+// rather than a second deadline.
 const FLUSH_TIMEOUT = 30000;
 
-/** For a failure the server never got to name. */
 const UNKNOWN = 'unknown';
 
 const LOADING: PreviewState = { status: 'loading' };
@@ -47,10 +40,7 @@ export function previewFor(url: string): PreviewState {
   return entries.get(url)?.state ?? LOADING;
 }
 
-/**
- * Returns at once. `onChange` fires once, when this URL settles either way, and
- * the answer is then read back with `previewFor`.
- */
+/** `onChange` fires once, when this URL settles either way; the answer is then read with `previewFor`. */
 export function loadPreview(url: string, onChange: () => void): void {
   const waiting = pending.get(url);
 
@@ -63,10 +53,9 @@ export function loadPreview(url: string, onChange: () => void): void {
 
   if (entry && entry.expires > Date.now()) return;
 
-  // A stale success is left in place so a post redrawn after the TTL keeps
-  // showing its card while the replacement is fetched, rather than blinking
-  // back to a skeleton. A stale failure has no card to keep, and left here it
-  // would read as settled and take the new card down before the answer lands.
+  // A stale success is left in place so a post redrawn after the TTL keeps its card
+  // while the replacement is fetched. A stale failure would read as settled and take
+  // the new card down before the answer lands.
   if (entry?.state.status === 'failed') entries.delete(url);
 
   pending.set(url, new Set([onChange]));
@@ -75,11 +64,7 @@ export function loadPreview(url: string, onChange: () => void): void {
   schedule();
 }
 
-/**
- * Guards against eviction. Cards re-read the store on every redraw rather than
- * keeping a copy, and only ask once, when created, so an entry dropped under a
- * mounted card leaves it in a skeleton it never comes out of.
- */
+/** Cards only ask once, when created, so an entry evicted under a mounted card leaves it a skeleton forever. */
 export function retainPreview(url: string): void {
   retained.set(url, (retained.get(url) ?? 0) + 1);
 }
@@ -102,15 +87,14 @@ function schedule(): void {
 
 function flush(): void {
   // Cleared before any early return below: a handle left set would convince
-  // `schedule()` a flush was already booked, and nothing would ever run again.
+  // `schedule()` a flush was already booked, and nothing would run again.
   timer = null;
 
   if (flushing || queue.length === 0) return;
 
   flushing = true;
 
-  // Spliced so the overflow stays queued, rather than draining the whole queue
-  // and putting the remainder back, which loses the callbacks it carries.
+  // Spliced so the overflow stays queued with the callbacks it carries.
   const batch = queue.splice(0, MAX_BATCH_SIZE);
 
   let released = false;
@@ -125,14 +109,12 @@ function flush(): void {
     if (queue.length > 0) schedule();
   };
 
-  // The lock needs a deadline because the request may never settle: core holds
-  // one that failed while offline until connectivity returns, which may be
-  // never, and the queue must not be stranded behind it.
+  // The request may never settle: core holds one that failed while offline until
+  // connectivity returns, and the queue must not be stranded behind it.
   const guard = setTimeout(release, FLUSH_TIMEOUT);
 
   send(batch)
-    // `send` settles every URL itself; this only stops a throwing subscriber
-    // surfacing as an unhandled rejection.
+    // `send` settles every URL itself; this only catches a throwing subscriber.
     .catch(() => undefined)
     .finally(release);
 }
@@ -165,10 +147,10 @@ async function sendBatch(urls: string[]): Promise<void> {
 }
 
 /**
- * A `POST` rather than a `GET`, so the endpoint cannot be reached from another
- * site. A cross origin `GET` fires from nothing but an `<img src>`, turning any
- * visitor of any page into an outbound fetch from this forum; a cross origin
- * `POST` carrying JSON needs a preflight the forum does not answer.
+ * A `POST` rather than a `GET`, so the endpoint cannot be reached from another site:
+ * a cross origin `GET` fires from nothing but an `<img src>`, turning any visitor of
+ * any page into an outbound fetch from this forum, while a cross origin `POST`
+ * carrying JSON needs a preflight the forum does not answer.
  */
 async function sendOne(url: string): Promise<void> {
   let data: PreviewData | undefined;
@@ -189,10 +171,7 @@ async function sendOne(url: string): Promise<void> {
   settle(url, data);
 }
 
-/**
- * A failure leaves the link alone and says nothing, and core's alert fires per
- * request, so a post full of dead links would stack banners over the forum.
- */
+/** Core's alert fires per request, so a post full of dead links would stack banners over the forum. */
 function quietly(): void {}
 
 function settle(url: string, data: PreviewData | undefined): void {
@@ -215,8 +194,8 @@ function stateFor(data: PreviewData | undefined): PreviewState {
 }
 
 function evict(): void {
-  // A Map hands back keys in insertion order, so the first is the oldest.
-  // Refreshing an entry keeps its place, making this a queue and not an LRU.
+  // Insertion order, and refreshing an entry keeps its place, so this is a queue
+  // and not an LRU.
   for (const oldest of Array.from(entries.keys())) {
     if (entries.size <= MAX_ENTRIES) break;
 

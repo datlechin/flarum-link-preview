@@ -26,13 +26,10 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use s9e\TextFormatter\Utils;
 
 /**
- * Previews for links that point back at this forum.
- *
  * Answered from the database, never over the network: on a single worker the
  * fetch would wait on the request serving it, and carrying no session it would
- * show a guest a discussion they cannot read. The address shapes recognised
- * here are the routes core and the tags extension register, and every lookup
- * is scoped to the reader, so a card never says more than its page would.
+ * show a guest a discussion they cannot read. Every lookup is scoped to the
+ * reader, so a card never says more than its page would.
  *
  * @phpstan-import-type MetaItem from Preview
  */
@@ -46,8 +43,8 @@ final class InternalPreviewer
     private ?array $origin = null;
 
     /**
-     * `false` while unread, so a forum with no favicon is looked up once
-     * rather than on every link in a batch of twenty.
+     * `false` while unread, so a forum with no favicon is looked up once rather
+     * than once per link.
      */
     private string|false|null $favicon = false;
 
@@ -60,12 +57,9 @@ final class InternalPreviewer
     }
 
     /**
-     * Whether this address is one this forum serves itself.
-     *
      * Host and port, never the scheme: the http spelling of a forum's own https
-     * link is still its own link, and comparing schemes sends it out to be
-     * fetched from the server already handling the request. For the same reason
-     * a link naming no port reads as this forum's port, not the scheme's default.
+     * link is still its own link. For the same reason a link naming no port
+     * reads as this forum's port, not the scheme's default.
      */
     public function isInternal(string $url): bool
     {
@@ -95,9 +89,6 @@ final class InternalPreviewer
         }
 
         if (preg_match('~^/d/(\d+)(?:-[^/]*)?(?:/([^/]*))?$~', $path, $matches) === 1) {
-            // `/d/1/near-something` and other positions that are not a post
-            // number keep their address, the same call core makes when
-            // labelling links.
             $near = $matches[2] ?? '';
 
             return $near === '' || ctype_digit($near)
@@ -109,7 +100,6 @@ final class InternalPreviewer
             return $this->user($url, $matches[1], $actor);
         }
 
-        // A tag route only exists when the tags extension does.
         if (preg_match('~^/t/([^/]+)$~', $path, $matches) === 1) {
             return $this->extensions->isEnabled('flarum-tags')
                 ? $this->tag($url, $matches[1], $actor)
@@ -156,9 +146,9 @@ final class InternalPreviewer
     }
 
     /**
-     * No description: a bio is not a core field. It arrives with an extension
-     * of its own, which owns the rule for who may read one, and guessing that
-     * rule here is how a card ends up saying more than the profile would.
+     * No description: a bio arrives with an extension that owns the rule for
+     * who may read one, and guessing it here is how a card says more than the
+     * profile would.
      */
     private function user(string $url, string $slug, User $actor): ?Preview
     {
@@ -205,10 +195,6 @@ final class InternalPreviewer
         );
     }
 
-    /**
-     * The index carries the host rather than the forum title as its site name,
-     * because the title is already the card's own heading.
-     */
     private function forum(string $url): Preview
     {
         return Preview::internal(
@@ -221,11 +207,6 @@ final class InternalPreviewer
         );
     }
 
-    /**
-     * What this forum would route, with the install's base path taken off and
-     * any trailing slash normalised away. Null when the address is not under
-     * that base path at all.
-     */
     private function path(string $url): ?string
     {
         $path = parse_url($url, PHP_URL_PATH);
@@ -238,8 +219,8 @@ final class InternalPreviewer
         $base = $this->origin()['path'];
 
         // A forum installed at example.com/forum does not own example.com/d/1,
-        // so the base path has to be present in full before what follows it
-        // means anything.
+        // so the base path has to match in full before what follows it means
+        // anything.
         if ($base !== '') {
             if ($path !== $base && ! str_starts_with($path, $base.'/')) {
                 return null;
@@ -252,10 +233,8 @@ final class InternalPreviewer
     }
 
     /**
-     * The model this forum's own routes would resolve the slug to, read through
-     * the configured driver rather than by column: a forum set to id slugs
-     * writes `/u/5`, which a query by username would never find. Every driver
-     * scopes to the actor and raises when there is nothing they may see.
+     * Read through the configured slug driver rather than by column: a forum
+     * set to id slugs writes `/u/5`, which a query by username would never find.
      *
      * @template T of AbstractModel
      *
@@ -285,8 +264,6 @@ final class InternalPreviewer
             return null;
         }
 
-        // Straight from the stored representation: no render, no formatter
-        // callbacks, no HTML to strip off again.
         $plain = trim(preg_replace('/\s+/', ' ', Utils::removeFormatting($xml)) ?? '');
 
         if ($plain === '') {
@@ -297,20 +274,20 @@ final class InternalPreviewer
     }
 
     /**
+     * Scoped rather than read off the discussion, so a tag the reader may not
+     * see never reaches a card as a name. `$discussion->tags` is the obvious
+     * simplification and leaks them.
+     *
      * @return list<string>
      */
     private function tagNames(Discussion $discussion, User $actor): array
     {
-        // The relation, the table and the model all belong to an extension the
-        // forum may not have turned on.
         if (! $this->extensions->isEnabled('flarum-tags')) {
             return [];
         }
 
         $names = [];
 
-        // Scoped rather than read off the discussion, so a tag the actor may
-        // not see does not arrive on a card as a name.
         $query = Tag::whereVisibleTo($actor)
             ->join('discussion_tag', 'discussion_tag.tag_id', '=', 'tags.id')
             ->where('discussion_tag.discussion_id', $discussion->id)
@@ -324,19 +301,11 @@ final class InternalPreviewer
         return $names;
     }
 
-    /**
-     * Missing and blank are the same thing to a card: the field is not there,
-     * rather than there and empty.
-     */
     private static function text(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;
     }
 
-    /**
-     * Resolved through the assets filesystem rather than assembled by hand, so
-     * a forum serving its uploads from a CDN gets the CDN address here too.
-     */
     private function faviconUrl(): ?string
     {
         if ($this->favicon === false) {
@@ -359,10 +328,6 @@ final class InternalPreviewer
     }
 
     /**
-     * The forum's own scheme, host, port and base path. Kept rather than
-     * rebuilt: a batch asks about twenty links and the answer cannot change
-     * inside one request.
-     *
      * @return array{scheme: string, host: string, port: int, path: string}
      */
     private function origin(): array
@@ -383,9 +348,8 @@ final class InternalPreviewer
     }
 
     /**
-     * The one spelling of a name that has several: a host is case insensitive,
-     * may carry the root's trailing dot, and is bracketed when it is an IPv6
-     * literal, so the same address arrives here in four shapes.
+     * A host is case insensitive, may carry the root's trailing dot, and is
+     * bracketed when it is an IPv6 literal.
      */
     private static function host(string $host): string
     {

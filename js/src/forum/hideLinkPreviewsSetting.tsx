@@ -2,19 +2,16 @@ import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
 import Switch from 'flarum/common/components/Switch';
 
-// Type only. The class itself lives in a lazily loaded chunk, so importing it
-// for use would pull a second copy into this bundle.
+// Type only: the class lives in a lazily loaded chunk, so a value import would pull in a second copy.
 import type SettingsPage from 'flarum/forum/components/SettingsPage';
 
 /** Kept on the page instance, not in module scope, so two settings pages cannot share one spinner. */
 type PageWithLoading = SettingsPage & { hideLinkPreviewsLoading?: boolean };
 
 /**
- * Let a reader turn link previews off for themselves.
- *
- * Sits with the privacy settings because that is what it decides: a card fetches
- * its picture and favicon from the linked site, straight from the reader's
- * browser, which tells that site the reader was here.
+ * Sits with the privacy settings because that is what it decides: a card fetches its
+ * picture and favicon from the linked site, straight from the reader's browser,
+ * which tells that site the reader was here.
  */
 export default function hideLinkPreviewsSetting(): void {
   extend<PageWithLoading, 'privacyItems'>('flarum/forum/components/SettingsPage', 'privacyItems', function (items) {

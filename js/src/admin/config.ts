@@ -4,11 +4,8 @@ import type Mithril from 'mithril';
 
 export const EXTENSION = 'datlechin-link-preview';
 
-/**
- * The settings this extension owns, under the names they must carry in
- * `locale/en.yml` and in `Settings\Config::DEFAULTS`. Storage keys, both
- * translation keys and the admin search entries are all derived from these.
- */
+// Names shared with `locale/en.yml` and `Settings\Config::DEFAULTS`: storage
+// keys, translation keys and admin search entries are all derived from these.
 export const SETTING = {
   openLinksInNewTab: 'open_links_in_new_tab',
   googleFaviconFallback: 'google_favicon_fallback',
@@ -21,11 +18,8 @@ export const SETTING = {
   blocklist: 'blocklist',
 } as const;
 
-/**
- * Must match the clamping in `Settings\Config::previewLimit()` and
- * `cacheSeconds()`, which runs on every read. Repeated here so the admin is
- * shown the number that will take effect rather than the blank that will not.
- */
+// Must match the clamping in `Settings\Config::previewLimit()` and
+// `cacheSeconds()`, so the admin is shown the number that will take effect.
 export const NUMBER_BOUNDS: Record<string, { min: number; fallback: number }> = {
   [SETTING.maxPreviewsPerPost]: { min: 1, fallback: 5 },
   [SETTING.cacheTime]: { min: 0, fallback: 60 },

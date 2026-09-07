@@ -1,19 +1,12 @@
 import app from 'flarum/forum/app';
 
 /**
- * The allowlist and the blocklist, applied in the browser.
- *
- * Both lists are in the forum payload, so a ruled-out link is dropped before it
- * costs a request the server would only refuse, once per reader.
- *
- * These rules mirror `Datlechin\LinkPreview\Preview\UrlFilter` and have to stay
- * that way. The server still wins where the two disagree, so a mismatch costs a
- * wasted request rather than a preview that should not exist.
+ * Mirrors `Datlechin\LinkPreview\Preview\UrlFilter` and has to stay that way. The server
+ * still wins where the two disagree, so a mismatch costs a request rather than a preview.
  */
 
 const patterns = new Map<string, RegExp | null>();
 
-/** Entries may be written one per line or comma separated; both are accepted. */
 export function parseList(value: string): string[] {
   return value
     .split(/[\n,]+/)
@@ -35,7 +28,6 @@ export default function matchesList(url: string, entries: readonly string[]): bo
   });
 }
 
-/** Whether this URL is worth asking the server about. */
 export function allowsUrl(url: string): boolean {
   const allowlist = parseList(app.forum.attribute<string | undefined>('datlechin-link-preview.allowlist') ?? '');
   const blocklist = parseList(app.forum.attribute<string | undefined>('datlechin-link-preview.blocklist') ?? '');
@@ -46,12 +38,9 @@ export function allowsUrl(url: string): boolean {
 }
 
 /**
- * What both sides of a comparison are reduced to: host, path and query, with
- * no scheme, no leading `www.` and no trailing slash.
- *
- * `hostname` drops userinfo and port, and the root label's trailing dot goes
- * too, so `example.com.` and `example.com` are one host. The fragment is
- * dropped as well, so `#section` cannot decide whether a link is blocked.
+ * What both sides of a comparison are reduced to: host, path and query, with no scheme,
+ * no leading `www.`, no trailing slash and no trailing dot on the root label. The
+ * fragment goes too, so `#section` cannot decide whether a link is blocked.
  */
 function subjectOf(url: string): string | null {
   let parsed: URL;
@@ -70,13 +59,28 @@ function subjectOf(url: string): string | null {
   return host + parsed.pathname.replace(/\/$/, '') + parsed.search;
 }
 
+/**
+ * Parsed rather than trimmed: `example.com:8443`, `someone@example.com` and `example.com.`
+ * all name the host an administrator meant, and `parse_url` reads them that way server side.
+ */
 function normalise(entry: string): string {
-  return entry
-    .trim()
+  const value = entry.trim();
+  const authority = /^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value.replace(/^\/+/, '')}`;
+
+  let parsed: URL;
+
+  try {
+    parsed = new URL(authority);
+  } catch {
+    return '';
+  }
+
+  const host = parsed.hostname
     .toLowerCase()
-    .replace(/^[a-z][a-z0-9+.-]*:\/\//, '')
-    .replace(/^www\./, '')
-    .replace(/\/+$/, '');
+    .replace(/\.$/, '')
+    .replace(/^www\./, '');
+
+  return host + parsed.pathname.toLowerCase().replace(/\/+$/, '');
 }
 
 function patternFor(entry: string): RegExp | null {
@@ -98,16 +102,14 @@ function compile(entry: string): RegExp | null {
   const host = slash === -1 ? normalised : normalised.slice(0, slash);
   const path = slash === -1 ? null : normalised.slice(slash);
 
-  // Inside the host `*` stops at a dot, so `*.example.com` cannot reach past
-  // one label and match `example.com.attacker.net`. Inside a path it runs
-  // freely, because a path has no such boundary to respect.
+  // Inside the host `*` stops at a dot, so `*.example.com` cannot reach past one
+  // label and match `example.com.attacker.net`. In a path it runs freely.
   const hostSource = escape(host).replace(/\\\*/g, '[^.]*');
 
   // A host entry covers subdomains; a path entry does not, it already names the address it means.
   const source = path === null ? `^(?:[^/?]+\\.)?${hostSource}(?:[/?].*)?$` : `^${hostSource}${escape(path).replace(/\\\*/g, '.*')}(?:[/?].*)?$`;
 
-  // Case insensitive for the path, which is compared against whatever case an
-  // administrator typed. The host is already lowercased on both sides.
+  // Case insensitive for the path; the host is already lowercased on both sides.
   return new RegExp(source, 'i');
 }
 

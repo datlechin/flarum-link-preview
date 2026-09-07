@@ -6,9 +6,8 @@ import collectPreviewTargets from './utils/collectLinks';
 import { mountCard, removeCardsWithin, sweepDetachedCards, unmountCardsWithin } from './utils/cardRegistry';
 
 /**
- * `extend()` passes the extended method's return value first and its arguments
- * after, so the vnode arrives second. Cast because naming a lazy loaded module
- * by path leaves `extend()` nothing to infer the component's types from.
+ * `extend()` passes the extended method's return value first and its arguments after,
+ * so the vnode arrives second, and a module named by path gives it nothing to infer.
  */
 const onPostRender = function (this: unknown, _: unknown, ...args: unknown[]): void {
   sweepDetachedCards();
@@ -36,13 +35,7 @@ const onPostRemove = function (this: unknown, _: unknown, ...args: unknown[]): v
   unmountCardsWithin(vnode.dom);
 };
 
-/**
- * Put a card under every bare address in a post.
- *
- * `CommentPost` is code split in Flarum 2, so it is named by module path rather
- * than imported. Importing it would bundle a second copy and patch the one the
- * page never loads.
- */
+/** `CommentPost` is code split in Flarum 2: importing it would bundle a second copy and patch the one the page never loads. */
 export default function addLinkPreviews(): void {
   extend('flarum/forum/components/CommentPost', ['oncreate', 'onupdate'], onPostRender);
   extend('flarum/forum/components/CommentPost', 'onremove', onPostRemove);
@@ -53,11 +46,9 @@ function previewsHidden(): boolean {
 }
 
 /**
- * A post whose body is the composer's live preview rather than saved content.
- *
- * `ComposerPostPreview` rewrites its own subtree from the raw text every 50ms,
- * by a diff that knows nothing about anything mounted into it, so a card put
- * there is torn out from under Mithril within the next tick.
+ * `ComposerPostPreview` rewrites its own subtree from the raw text every 50ms, by a
+ * diff that knows nothing about anything mounted into it, so a card put there is
+ * torn out from under Mithril within the next tick.
  */
 function isBeingEdited(post: unknown, body: HTMLElement): boolean {
   if (body.querySelector('.Post-preview') !== null) return true;
@@ -68,11 +59,8 @@ function isBeingEdited(post: unknown, body: HTMLElement): boolean {
 }
 
 /**
- * A deleted post the reader has not opened.
- *
- * Core renders the content anyway and only collapses it with CSS, so the links
- * are all there to be found. Revealing the post redraws it and the cards are
- * made then, rather than spending a request each behind `display: none`.
+ * A deleted post the reader has not opened: core renders the content anyway and only
+ * collapses it with CSS, so every link there would spend a request behind `display: none`.
  */
 function isConcealed(post: Element): boolean {
   return post.classList.contains('Post--hidden') && !post.classList.contains('revealContent');

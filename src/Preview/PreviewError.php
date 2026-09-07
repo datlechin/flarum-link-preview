@@ -12,11 +12,8 @@
 namespace Datlechin\LinkPreview\Preview;
 
 /**
- * Why a preview could not be produced.
- *
  * Nothing renders these: a link whose preview fails keeps the plain link it
- * already was. They are what an administrator reads off the API to tell a
- * blocked host from an unreachable one.
+ * already was.
  */
 enum PreviewError: string
 {

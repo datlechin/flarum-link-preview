@@ -14,31 +14,21 @@ namespace Datlechin\LinkPreview\Settings;
 use Flarum\Settings\SettingsRepositoryInterface;
 
 /**
- * The settings the server side reads, in the types it needs them in.
- *
- * `SettingsRepositoryInterface::get()` answers `mixed`, and a setting saved
- * through the admin page arrives as a string whatever the extender declared.
- * Every read is funnelled through here so a `'0'` or an empty row means the
- * same thing everywhere rather than however the calling site cast it.
+ * A setting saved through the admin page arrives as a string whatever the
+ * extender declared, so every read is funnelled through here rather than cast
+ * at the calling site.
  */
 final class Config
 {
     /**
-     * How many URLs one batch request may carry. Mirrored by the frontend
-     * queue, which chunks to the same number so a page full of links never
-     * sends a request the server would truncate.
+     * Mirrored by the frontend queue, which chunks to the same number so a page
+     * full of links never sends a request the server would truncate.
      */
     public const MAX_BATCH_SIZE = 20;
 
     private const PREFIX = 'datlechin-link-preview.';
 
     /**
-     * What a forum that has never opened the settings page runs on.
-     *
-     * `extend.php` declares its defaults from this array and every read below
-     * falls back to it, so the two cannot disagree about a missing row. Keyed
-     * by the full setting key, the form extender and repository both speak.
-     *
      * @var array<string, mixed>
      */
     public const DEFAULTS = [
@@ -54,9 +44,7 @@ final class Config
     ];
 
     /**
-     * The longest a failure is remembered for. Without negative caching a dead
-     * domain costs a connect timeout per reader per page view, but a site that
-     * was down for a minute should not stay blank for an hour.
+     * A site that was down for a minute should not stay blank for an hour.
      */
     private const MAX_NEGATIVE_CACHE_SECONDS = 600;
 
@@ -112,9 +100,9 @@ final class Config
     }
 
     /**
-     * At least one, whatever the row says: an administrator who clears the
-     * field or types a zero asked for fewer previews, not for a forum where no
-     * link gets one. The browser reads this same number from the forum payload.
+     * At least one: an administrator who clears the field is asking for fewer
+     * previews, not for a forum where no link ever gets one. The browser reads
+     * the same number from the forum payload and applies the same floor.
      */
     public static function previewLimit(mixed $value): int
     {
@@ -137,10 +125,6 @@ final class Config
         return array_values(array_filter(array_map(trim(...), $entries), fn (string $entry) => $entry !== ''));
     }
 
-    /**
-     * A missing row falls back to the declared default rather than to false, so
-     * a forum that never opened the settings page gets the advertised behaviour.
-     */
     private function boolean(string $key): bool
     {
         $stored = $this->settings->get(self::PREFIX.$key);

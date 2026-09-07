@@ -11,10 +11,6 @@
 
 namespace Datlechin\LinkPreview\Http\Exception;
 
-/**
- * The response arrived and was fine, it just is not a document with metadata
- * in it: a PDF, an image, a JSON API. Reported as `not_previewable`.
- */
 final class UnsupportedContentException extends LinkPreviewException
 {
 }

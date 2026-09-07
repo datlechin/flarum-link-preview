@@ -11,12 +11,6 @@
 
 namespace Datlechin\LinkPreview\Http;
 
-/**
- * The real resolver, asking the host it is running on.
- *
- * Both address families are looked up: a host carrying only AAAA records must
- * not come back as one that does not resolve.
- */
 final class SystemResolver implements Resolver
 {
     /**
@@ -26,8 +20,7 @@ final class SystemResolver implements Resolver
     {
         $literal = trim($host, '[]');
 
-        // The brackets an IPv6 literal wears in a URL are not part of the
-        // address and would fail every check downstream.
+        // The brackets an IPv6 literal wears in a URL are not part of the address.
         if (filter_var($literal, FILTER_VALIDATE_IP) !== false) {
             return [$literal];
         }

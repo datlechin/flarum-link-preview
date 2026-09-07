@@ -4,63 +4,41 @@ import { allowsUrl } from './matchesList';
 
 export interface PreviewTarget {
   link: HTMLAnchorElement;
-  /** Where the link leads, which is not always what its `href` says. */
   url: string;
-  /** Decided from `url`, never from the `href`, which may point elsewhere. */
   internal: boolean;
   block: HTMLElement;
   mode: 'replace' | 'after';
 }
 
-/**
- * Which links in a post are worth a card, and where the card goes.
- *
- * Only a bare address qualifies: words the writer chose are what they wanted
- * read. A link back at this forum must also lead to one of the pages the server
- * will describe, and a discussion is the exception to the bare address rule,
- * since core has already replaced its text with a `#123` label that a card can
- * improve on.
- *
- * All of it is decided against the address the link actually leads to, which
- * `destinationOf` recovers first, because the `href` is no longer reliably it.
- */
-
-/** A mention carries a name the writer chose. */
 const MENTIONS = '.PostMention, .UserMention, .GroupMention, .TagMention';
 
-/** Core's label for a link to a discussion on this forum. */
 const DISCUSSION = '.UrlLink--discussion';
 
-/** The span core renders the discussion's id into, inside that label. */
 const DISCUSSION_ID = '.UrlLink-discussion';
 
-/** Core's mark for a link the writer really did point at this forum. */
 const INTERNAL = '.UrlLink--internal';
 
 const HANDLED = '[data-link-preview]';
 
 const CARD = '.LinkPreview-container';
 
-/** A quote is somebody else's post and gets its card there; code only looks like an address. */
 const EXCLUDED_ANCESTOR = 'blockquote, pre, code, [data-link-preview]';
 
 const MEDIA = /\.(jpe?g|png|gif|svg|webp|avif|mp3|mp4|m4a|wav|ogg|webm)$/i;
 
 const EMBEDDED = 'img, picture, video, audio, iframe, embed, object, svg';
 
-/** A card is placed against one of these, never the inline element the address sits in. */
 const BLOCKS = new Set(['P', 'DIV', 'LI', 'DD', 'DT', 'TD', 'TH', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'FIGCAPTION', 'SECTION', 'ARTICLE']);
 
 export default function collectPreviewTargets(postBody: HTMLElement): PreviewTarget[] {
-  // Clamped to match `Config::previewLimit`. Read raw, a stored 0 would switch
-  // previews off in the browser while the server went on serving them.
+  // Floored at 1 to match `Config::previewLimit`: a stored 0 would switch previews
+  // off in the browser while the server went on serving them.
   const max = Math.max(1, app.forum.attribute<number | undefined>('datlechin-link-preview.maxPreviewsPerPost') ?? 5);
   const skipMedia = app.forum.attribute<boolean | undefined>('datlechin-link-preview.skipMediaLinks') ?? false;
   const internalAllowed = app.forum.attribute<boolean | undefined>('datlechin-link-preview.previewInternalLinks') ?? true;
 
-  // What the post has left, not what this pass may add: `onupdate` fires for
-  // something as ordinary as a hover, so a per-pass count would let a post with
-  // twenty links reach twenty cards after a few redraws.
+  // What the post has left, not what this pass adds: `onupdate` fires for a hover,
+  // so a per-pass count would let one post reach twenty cards after a few redraws.
   const budget = max - postBody.querySelectorAll(CARD).length;
 
   if (budget <= 0) return [];
@@ -93,10 +71,9 @@ function targetFor(link: HTMLAnchorElement, postBody: HTMLElement, skipMedia: bo
 
   const block = blockOf(link, postBody);
 
-  // A link with no block of its own is left alone: a card here would change the
-  // top level node count Mithril remembers from `m.trust(contentHtml)`, and
-  // wrapping the anchor instead leaves `vnode.dom` detached, which throws inside
-  // Mithril on the next content change and freezes the body for good.
+  // A link with no block of its own is left alone: a card here would change the top
+  // level node count Mithril remembers from `m.trust(contentHtml)`, and wrapping the
+  // anchor instead leaves `vnode.dom` detached, which throws on the next edit.
   if (block === postBody) return null;
 
   const alone = isSoleContent(link, block);
@@ -106,13 +83,10 @@ function targetFor(link: HTMLAnchorElement, postBody: HTMLElement, skipMedia: bo
   if (internal) {
     if (!internalAllowed) return null;
 
-    // Any other page of this forum keeps whatever core made of it, because the
-    // server has nothing to say about it and would answer with a failure.
     if (!isPreviewableRoute(destination)) return null;
 
-    // Core replaced this link's text with a `#123` label, so the address test
-    // below cannot be asked of it, and inside a sentence that label already
-    // reads better than a card would.
+    // Core replaced this link's text with a `#123` label, so the address test below
+    // cannot be asked of it.
     if (link.matches(DISCUSSION)) {
       return alone ? { link, url, internal, block, mode: 'replace' } : null;
     }
@@ -124,21 +98,17 @@ function targetFor(link: HTMLAnchorElement, postBody: HTMLElement, skipMedia: bo
 }
 
 /**
- * The address this link leads to.
- *
  * Not simply the `href`: datlechin/flarum-link-clicks points tracked links at
- * `/lcc/track?u=`, where the token is signed over a row id, so the destination
- * cannot be read back out of the `href` at all. It leaves the stored XML alone,
- * which is why core's classification of the link is still honest and can
- * recover what the `href` no longer says.
+ * `/lcc/track?u=`, where a signed token stands in for the address. It leaves the
+ * stored XML alone, so core's classes still say what the writer wrote.
  */
 function destinationOf(link: HTMLAnchorElement): URL | null {
   return discussionDestination(link) ?? rewrittenDestination(link) ?? httpUrl(link.getAttribute('href') ?? '', document.baseURI);
 }
 
 /**
- * The id is read from the label, not the address: the label is rendered from
- * the stored `discussionid`, so it survives any rewriting of the `href`.
+ * Read from the label core rendered rather than from the `href`, which is what
+ * makes this survive a tracking route being written over it.
  */
 function discussionDestination(link: HTMLAnchorElement): URL | null {
   if (!link.matches(DISCUSSION)) return null;
@@ -151,15 +121,9 @@ function discussionDestination(link: HTMLAnchorElement): URL | null {
 }
 
 /**
- * The destination of a link whose `href` was rewritten after core classified
- * it, read back off the link's own text.
- *
- * The `UrlLink--internal` test is what makes trusting that text safe. Core
- * stamps the class on every link the writer really did point at this forum
- * (`Formatter::configureDefaultsOnLinks`), so a same origin `href` without it
- * can only have been put there by a rewrite. That leaves
- * `[https://good.com](https://myforum.test/x)`, which core does mark internal,
- * skipped rather than believed.
+ * The `UrlLink--internal` test is what makes trusting the link's text safe: core
+ * stamps that class on every link the writer really did point at this forum, so a
+ * same origin `href` without it can only have been put there by a rewrite.
  */
 function rewrittenDestination(link: HTMLAnchorElement): URL | null {
   if (link.matches(INTERNAL)) return null;
@@ -175,10 +139,7 @@ function rewrittenDestination(link: HTMLAnchorElement): URL | null {
   return text;
 }
 
-/**
- * An `http` or `https` address, or nothing. Called without a base, nothing
- * relative parses, which is what makes it the test for "the text is an address".
- */
+/** Called without a base nothing relative parses, which is what makes it the test for "the text is an address". */
 function httpUrl(value: string, base?: string): URL | null {
   if (value === '') return null;
 
@@ -193,43 +154,29 @@ function httpUrl(value: string, base?: string): URL | null {
   return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
 }
 
-/**
- * Decided the way core decides it in `routeInternalLinks.ts`, base path and
- * all: the links core routes rather than reloads are exactly the ones whose
- * previews come from the database instead of an HTTP request.
- */
+/** Decided the way core decides it in `routeInternalLinks.ts`, base path and all. */
 function isInternal(url: URL): boolean {
   if (url.origin !== window.location.origin) return false;
 
   const base = basePath();
 
-  // A forum in a subdirectory shares its origin with its neighbours, which the
-  // origin test alone would claim as internal.
+  // A forum in a subdirectory shares its origin with its neighbours.
   if (base && url.pathname !== base && !url.pathname.startsWith(base + '/')) return false;
 
   return true;
 }
 
-/**
- * Whether this address is one of the forum's own pages the server will describe.
- *
- * The shapes have to agree with `InternalPreviewer`, which is what actually
- * answers. Anything outside them is left alone here rather than sent off to come
- * back a failure.
- */
+/** The shapes have to agree with `InternalPreviewer`, which is what actually answers. */
 function isPreviewableRoute(url: URL): boolean {
   const base = basePath();
 
   // `isInternal` has already established that the base path is there in full.
   const path = trimSlash(base === '' ? url.pathname : url.pathname.slice(base.length));
 
-  // The index describes the forum. `/tags` does not: a card there could only be
-  // titled with the forum's own name, which says less than the address it
-  // replaced.
+  // The index, but not `/tags`: the only card that route could carry is titled
+  // with the forum's own name, which says less than the address it replaces.
   if (path === '') return true;
 
-  // A position that is not a post number keeps its address, the same call core
-  // makes when it decides whether to label a discussion link.
   if (/^\/d\/\d+(?:-[^/]*)?(?:\/\d+)?$/.test(path)) return true;
 
   return /^\/u\/[^/]+$/.test(path) || /^\/t\/[^/]+$/.test(path);
@@ -240,13 +187,9 @@ function basePath(): string {
 }
 
 /**
- * The address is all the link says.
- *
- * Core makes the same call in `labelDiscussionLinks.ts` before turning a
- * discussion address into a label, and the two have to agree. Written `href`,
- * resolved `href` and destination all count: a writer who typed `example.com`
- * meant the address as much as one who typed the scheme, and a rewritten `href`
- * matches neither.
+ * Core makes the same call in `labelDiscussionLinks.ts` and the two have to agree.
+ * Written `href`, resolved `href` and destination all count: a writer who typed
+ * `example.com` meant the address as much as one who typed the scheme.
  */
 function textIsTheAddress(link: HTMLAnchorElement, destination: URL): boolean {
   const text = trimSlash((link.textContent ?? '').trim());
@@ -272,15 +215,9 @@ function blockOf(link: HTMLAnchorElement, postBody: HTMLElement): HTMLElement {
   return postBody;
 }
 
-/**
- * If the address is all its paragraph says the card stands in for it; inside a
- * sentence, the sentence keeps its link and the card follows the paragraph.
- */
 function isSoleContent(link: HTMLAnchorElement, block: HTMLElement): boolean {
   if ((block.textContent ?? '').trim() !== (link.textContent ?? '').trim()) return false;
 
-  // Text is not the whole of it: a picture beside the address would be left
-  // standing alone. One inside the link goes wherever the link goes, which is
-  // what core's labelled discussion links are made of.
+  // A picture beside the address would be left standing alone; one inside the link goes with it.
   return Array.from(block.querySelectorAll(EMBEDDED)).every((element) => link.contains(element));
 }

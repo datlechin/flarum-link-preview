@@ -8,11 +8,8 @@ export interface PreviewImage {
 }
 
 /**
- * One entry in the card's info row, in the order the server meant it read.
- *
  * `key` names a locale string under `datlechin-link-preview.forum.meta`, except
- * for the two shapes that carry their own text or their own formatting. Three
- * shapes and no more, so one renderer serves every type of card.
+ * for the two shapes that carry their own text or their own formatting.
  */
 export type MetaItem = { key: string; text: string } | { key: string; count: number } | { key: string; date: string };
 

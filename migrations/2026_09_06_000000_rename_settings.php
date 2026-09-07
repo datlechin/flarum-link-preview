@@ -11,13 +11,6 @@
 
 use Illuminate\Database\Schema\Builder;
 
-/**
- * Four settings changed name and two were withdrawn.
- *
- * The external API fallback is withdrawn rather than renamed: it sent every URL
- * a member posted to a third party the administrator configured once and
- * forgot, and there is nowhere honest to put that value now.
- */
 $renames = [
     'use_google_favicons' => 'google_favicon_fallback',
     'convert_media_urls' => 'skip_media_links',
@@ -62,8 +55,8 @@ return [
             ->delete();
     },
 
-    // The renames reverse. The external API rows do not: their values were
-    // deleted above and nothing here could invent them back.
+    // The withdrawn external API rows do not come back: their values were
+    // deleted above and nothing here could invent them.
     'down' => function (Builder $schema) use ($renames): void {
         $connection = $schema->getConnection();
 
