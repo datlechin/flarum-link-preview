@@ -1,111 +1,261 @@
-@keyframes linkPreviewFadeIn {
-  from { opacity: 0.7; }
-  to { opacity: 1; }
+// A link preview card, built out of what Flarum already has.
+//
+// Core ships no card of this kind, so the block is ours. None of its values
+// are: the colours are core's custom properties, the chrome is the one core
+// gives a raised surface, the type is the scale `DiscussionListItem` reads at,
+// the loading state is core's own placeholder, and the focus ring is core's
+// mixin. Nothing here invents a second design language beside Flarum's.
+
+// The anchor the card stands in for. Hidden rather than removed, so a reader
+// who turns previews off gets the plain link back without reloading the page.
+//
+// Qualified, because `replace` mode is exactly the case where the anchor is
+// core's `.UrlLink--discussion`, whose `display: inline-flex` is the same
+// specificity. Left bare this would win only on the order the two stylesheets
+// happen to be concatenated in.
+.Post-body .LinkPreview-source {
+  display: none;
 }
 
-.LinkPreview {
-  background: var(--button-bg);
-  color: var(--button-color);
-  padding: 5px 10px;
-  display: flex;
-  border-radius: var(--border-radius);
-  margin-top: 5px;
-  transition: background-color 0.2s ease;
+// The element is a `span`, because a `div` inside the `p` a post is usually
+// made of is invalid nesting, so it has to be told to behave as a block.
+.LinkPreview-container {
+  display: block;
+  max-width: 100%;
+  // What `.Post-body` gives a paragraph, a list or a blockquote, so a card sits
+  // in the run of a post at the same rhythm as the text around it.
+  margin: 1em 0;
+}
 
-  &:hover {
+// `blockquote` is core's own embedded block inside a post: the control surface,
+// the shared radius, and 8px 15px of padding. A card is the same kind of thing,
+// so it is the same box.
+.LinkPreview {
+  display: flex;
+  max-width: 100%;
+  overflow: hidden;
+  background: var(--control-bg);
+  color: var(--control-color);
+  border-radius: var(--border-radius);
+  text-decoration: none;
+
+  .add-keyboard-focus-ring();
+
+  // Core never raises a shadow on hover. Every `box-shadow` it writes belongs
+  // to something that floats over the page from the start, or stands in for a
+  // focus ring on an input. A card is neither.
+  //
+  // What core does with a surface already sitting on `--control-bg` is shade it,
+  // in `HeaderList` and in `Table`. And the nearest thing core has to this card,
+  // `UrlLink--discussion`, is a link drawn as a control-bg box inside a post
+  // body: on hover it underlines its label and takes the link colour. Both,
+  // together, are the whole gesture.
+  &:hover,
+  &:focus {
+    background: var(--control-bg-shaded);
+    // `a` is `.text-link()`, which underlines the whole anchor on hover. The
+    // label below carries the underline instead.
+    text-decoration: none;
+
+    .LinkPreview-title {
+      color: var(--link-color);
+      text-decoration: underline;
+    }
+  }
+}
+
+// `.Post-body a` underlines links in running text and bolds them, at a
+// specificity of (0,1,1). Matched here at (0,2,0) so the card opts out without
+// `!important`, which is how `core/less/common/UrlLink.less` does it for core's
+// own discussion label.
+.Post-body .LinkPreview {
+  border-bottom: 0;
+  font-weight: normal;
+}
+
+.LinkPreview--compact {
+  align-items: center;
+  gap: 15px;
+  padding: 8px 15px;
+}
+
+.LinkPreview--large {
+  flex-direction: column;
+}
+
+.LinkPreview-media {
+  flex-shrink: 0;
+  overflow: hidden;
+  // Behind an image with transparency, and while one is still loading.
+  background: var(--body-bg);
+}
+
+.LinkPreview--large .LinkPreview-media {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+}
+
+// The measurements core cannot supply. It has avatars, badges and pills, but
+// nothing that stands a remote thumbnail beside two lines of text, and it uses
+// `aspect-ratio` nowhere at all. So the 2:1 frame above and the 72px square
+// here are both chosen, and both are sized to the text they sit against.
+.LinkPreview--compact .LinkPreview-media {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--border-radius);
+
+  @media @phone {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+.LinkPreview-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.LinkPreview-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.LinkPreview--large .LinkPreview-body {
+  padding: 8px 15px;
+}
+
+// `DiscussionListItem-info` does this same job in core, and reads at this same
+// size and colour.
+//
+// Qualified for the margin's sake. `DiscussionListItem-info` zeroes it from a
+// bare class because it never appears inside a post, while `.Post-body ul` sets
+// `margin-bottom: 1em` at (0,1,1) and would out-specify a bare class here,
+// leaving the row floating a line above the title.
+.LinkPreview .LinkPreview-info {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted-more-color);
+
+  > li {
+    display: inline;
+  }
+
+  > li + li {
+    margin-left: 8px;
+  }
+
+  // `.username` carries no styling of its own in core; every container that
+  // uses it states this, `DiscussionListItem-info` included.
+  .username {
+    font-weight: bold;
+  }
+}
+
+.LinkPreview-site {
+  // Holds the icon and the host together on one line, without letting a long
+  // host push the rest of the list out of the card.
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  vertical-align: bottom;
+}
+
+.LinkPreview-favicon {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+}
+
+.LinkPreview-siteName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// `DiscussionListItem-title` is the same thing in core's list: the heading
+// colour and the tighter leading. Clamped rather than ellipsised, because a
+// card has room for a second line where a list row does not.
+.LinkPreview-title {
+  margin: 3px 0 0;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--heading-color);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// `DiscussionListItem-info .item-excerpt`, to the value. The colour is stated
+// rather than inherited: core's excerpt is a child of the info list and takes
+// the muted colour from it, while this one is the list's sibling and would
+// otherwise read at full strength.
+.LinkPreview-excerpt {
+  color: var(--muted-more-color);
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5em;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// Core's placeholder for content that has not arrived yet: the same bars
+// `LoadingPost` is made of, under the same animation, both defined in
+// `forum/PostStream.less`. Reusing them rather than drawing a second kind of
+// skeleton is the whole point.
+.LinkPreview--loading {
+  animation: blink 1s linear infinite;
+
+  // Core paints `.fakeText` in `--control-bg` because it only ever puts one on
+  // the page background. On a card already painted `--control-bg` the bars
+  // vanish, so they take the shade core uses when one control sits on another.
+  .fakeText {
+    background: var(--control-bg-shaded);
+    margin-bottom: 0;
+
+    & + .fakeText {
+      margin-top: 8px;
+      width: 60%;
+    }
+  }
+
+  // A placeholder is not a thing to press yet, so it does not answer to the
+  // pointer the way a finished card does.
+  &:hover,
+  &:focus {
     background: var(--control-bg);
   }
+}
 
-  a {
-    border-bottom: none;
-  }
+.LinkPreview--failed {
+  color: var(--muted-color);
+}
 
-  &--loading {
-    opacity: 0.7;
-  }
-
-  &--loaded {
-    animation: linkPreviewFadeIn 0.3s ease;
-  }
-
-  &--error {
-    opacity: 0.6;
-  }
-
-  &-image {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 60px;
-    flex-shrink: 0;
-    padding: 5px 0;
-
-    @media @phone {
-      width: 50px;
-    }
-
-    img {
-      width: 100%;
-      height: 60px;
-      object-fit: cover;
-      border-radius: calc(var(--border-radius) - 2px);
-
-      @media @phone {
-        height: 50px;
-      }
-    }
-  }
-
-  &-main {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-  }
-
-  &-image + &-main {
-    margin-left: 15px;
-  }
-
-  &-title {
-    font-size: 15px;
-    font-weight: bold;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &-description {
-    font-size: 12px;
-    color: var(--button-color);
-    margin-bottom: 5px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-
-    &--error {
-      color: var(--error-color, #d9534f);
-      font-style: italic;
-    }
-  }
-
-  &-domain {
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-
-    a {
-      color: var(--muted-more-color);
-    }
-    img, i {
-      width: 14px;
-      margin-right: 5px;
+// A card that failed, and one whose page gave no title, both render the site
+// line and no title, so the gesture above has nothing to land on and the card
+// answers the pointer with a shade and nothing else. `:has` is core's own
+// (`PostStream.less:5`), and this is the one place the fallback is needed.
+.LinkPreview:not(:has(.LinkPreview-title)) {
+  &:hover,
+  &:focus {
+    .LinkPreview-siteName {
+      color: var(--link-color);
+      text-decoration: underline;
     }
   }
 }
 
-.LinkPreview-captured {
-  display: none !important;
+// `object-fit` and `border-radius` mean nothing on the `<i>` core's `Icon`
+// renders when a site offers no favicon; only the sizing applies to both.
+img.LinkPreview-favicon {
+  object-fit: contain;
+  border-radius: 2px;
 }

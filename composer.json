@@ -1,66 +1,110 @@
 {
-  "name": "datlechin/flarum-link-preview",
-  "description": "Automatically display a rich preview of the link contents.",
-  "keywords": [
-    "flarum",
-    "flarum-extension",
-    "link preview",
-    "preview"
-  ],
-  "type": "flarum-extension",
-  "license": "MIT",
-  "require": {
-    "php": "^8.2",
-    "flarum/core": "^2.0.0-beta",
-    "ext-dom": "*"
-  },
-  "authors": [
-    {
-      "name": "Ngo Quoc Dat",
-      "email": "datlechin@gmail.com",
-      "role": "Developer"
-    }
-  ],
-  "support": {
-    "source": "https://github.com/datlechin/flarum-link-preview",
-    "forum": "https://discuss.flarum.org/d/30011"
-  },
-  "autoload": {
-    "psr-4": {
-      "Datlechin\\LinkPreview\\": "src/"
-    }
-  },
-  "homepage": "https://ngoquocdat.dev",
-  "extra": {
-    "flarum-extension": {
-      "title": "Link Preview",
-      "category": "feature",
-      "icon": {
-        "name": "fas fa-eye",
-        "color": "#fff",
-        "backgroundColor": "#D3241C"
-      }
+    "name": "datlechin/flarum-link-preview",
+    "description": "Rich previews for links in posts, fetched by the forum itself: title, description, image and site icon.",
+    "keywords": [
+        "flarum",
+        "link preview",
+        "preview",
+        "open graph",
+        "unfurl",
+        "embed"
+    ],
+    "type": "flarum-extension",
+    "license": "MIT",
+    "support": {
+        "issues": "https://github.com/datlechin/flarum-link-preview/issues",
+        "source": "https://github.com/datlechin/flarum-link-preview",
+        "forum": "https://discuss.flarum.org/d/30011"
     },
-    "flarum-cli": {
-      "modules": {
-        "admin": true,
-        "forum": true,
-        "js": true,
-        "jsCommon": false,
-        "css": true,
-        "locale": true,
-        "gitConf": true,
-        "githubActions": true,
-        "prettier": true,
-        "typescript": true,
-        "bundlewatch": false,
-        "backendTesting": false,
-        "editorConfig": true,
-        "styleci": true
-      }
+    "homepage": "https://ngoquocdat.dev",
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/sponsors/datlechin"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "flarum/core": "^2.0.0-rc.7",
+        "ext-dom": "*",
+        "ext-mbstring": "*",
+        "ext-json": "*"
+    },
+    "authors": [
+        {
+            "name": "Ngo Quoc Dat",
+            "email": "datlechin@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Datlechin\\LinkPreview\\": "src/"
+        }
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "Link Preview",
+            "category": "feature",
+            "icon": {
+                "name": "fas fa-eye",
+                "color": "#fff",
+                "backgroundColor": "#D3241C"
+            }
+        },
+        "flarum-cli": {
+            "modules": {
+                "admin": true,
+                "forum": true,
+                "js": true,
+                "jsCommon": true,
+                "css": true,
+                "locale": true,
+                "gitConf": true,
+                "githubActions": true,
+                "prettier": true,
+                "typescript": true,
+                "bundlewatch": false,
+                "frontendTesting": false,
+                "backendTesting": true,
+                "phpstan": true,
+                "editorConfig": true,
+                "styleci": true
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload-dev": {
+        "psr-4": {
+            "Datlechin\\LinkPreview\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": [
+            "@test:unit",
+            "@test:integration"
+        ],
+        "test:unit": "phpunit -c tests/phpunit.unit.xml",
+        "test:integration": "phpunit -c tests/phpunit.integration.xml",
+        "test:setup": "@php tests/integration/setup.php",
+        "analyse:phpstan": [
+            "@php tests/phpstan-setup.php",
+            "phpstan analyse"
+        ],
+        "clear-cache:phpstan": "phpstan clear-result-cache"
+    },
+    "scripts-descriptions": {
+        "test": "Runs all tests.",
+        "test:unit": "Runs all unit tests.",
+        "test:integration": "Runs all integration tests.",
+        "test:setup": "Sets up a database for use with integration tests. Execute this only once.",
+        "analyse:phpstan": "Run static analysis"
+    },
+    "require-dev": {
+        "flarum/testing": "^2.0",
+        "flarum/phpstan": "^2.0",
+        "flarum/tags": "*",
+        "laravel/pint": "^1.18"
     }
-  },
-  "require-dev": {
-    "laravel/pint": "^1.18"
-  }
 }

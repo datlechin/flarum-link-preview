@@ -2,20 +2,27 @@ name: Link Preview JS
 
 on: [workflow_dispatch, push, pull_request]
 
-# The reusable workflow definitions will be moved to the `flarum/framework` repo soon.
-# This will break your current script.
-# When this happens, run `flarum-cli audit infra --fix` to update your infrastructure.
+# The build action commits the compiled bundles back to the branch, so the
+# Composer package ships them prebuilt. Without this the job reaches the end
+# and fails on a 403, having already built and tested everything.
+permissions:
+  contents: write
 
 jobs:
   run:
-    uses: flarum/framework/.github/workflows/REUSABLE_frontend.yml@main
+    uses: flarum/framework/.github/workflows/REUSABLE_frontend.yml@2.x
     with:
+      # `bundlewatch` is not a dependency of this package and there is no
+      # token for it on this account.
       enable_bundlewatch: false
       enable_prettier: true
-      enable_typescript: false
+      enable_typescript: true
+
+      # `typescript-coverage-report` has not been released for TypeScript 5,
+      # which the rest of the toolchain needs.
+      type_coverage_script: ''
 
       frontend_directory: ./js
+      backend_directory: .
       js_package_manager: npm
       main_git_branch: main
-    secrets:
-      bundlewatch_github_token: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}

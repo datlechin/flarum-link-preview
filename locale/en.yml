@@ -1,35 +1,78 @@
 datlechin-link-preview:
+
   admin:
+
     sections:
-      general_label: General
-      general_description: Basic display preferences for link previews.
+      appearance_label: Appearance
+      appearance_description: How a preview looks, and where pressing it goes.
+      behaviour_label: Behaviour
+      behaviour_description: Which links in a post get a preview.
       performance_label: Performance
-      performance_description: Optimize how link previews are fetched and cached.
-      url_filtering_label: URL Filtering
-      url_filtering_description: Control which URLs generate link previews.
-      external_api_label: External API Fallback
-      external_api_description: Use an external service when direct fetching fails (e.g., bot-protected sites).
+      performance_description: How previews are fetched and how long they are kept.
+      filtering_label: Filtering
+      filtering_description: >
+        Which sites may be previewed. One entry per line, or separated by
+        commas. A host matches its subdomains too, and * stands for one part
+        of a name.
+
     settings:
-      enable_batch_requests_label: Enable Batch Processing
-      enable_batch_requests_help: Improve performance by processing multiple link previews simultaneously. When disabled, links are processed one at a time.
-      blacklist_label: Domain Blacklist
-      blacklist_help: Specify domains or URLs that should not generate link previews. Use commas to separate multiple entries.
-      blacklist_placeholder: "Examples: facebook.com, twitter.com/specific-page"
-      whitelist_label: Domain Whitelist
-      whitelist_help: Only generate previews for these domains or URLs. Leave empty to allow all non-blacklisted domains.
-      whitelist_placeholder: "Examples: trusted-site.com, specific-domain.org/path"
-      convert_media_urls_label: Preview Media URLs
-      convert_media_urls_help: Generate previews for URLs that point to media files (images, videos, etc.).
-      use_google_favicons_label: Display Site Icons
-      use_google_favicons_help: Show website favicons using Google's Favicon service to enhance visual recognition.
-      cache_time_label: Cache Duration (minutes)
-      cache_time_help: "How long to store link previews before refreshing. Set to 0 to disable caching. Default: 60 minutes."
-      open_links_in_new_tab_label: Open Links in New Tab
-      open_links_in_new_tab_help: Always open previewed links in a new browser tab.
-      external_api_fallback_label: External API Fallback
-      external_api_fallback_help: When direct fetching fails (e.g. bot-protected sites like Reuters), use an external oEmbed API to retrieve link metadata.
-      external_api_url_label: External API URL
-      external_api_url_help: "Custom oEmbed API endpoint. Leave empty to use the default (Iframely open API). The URL will be appended as a query parameter."
+      open_links_in_new_tab_label: Open links in a new tab
+      open_links_in_new_tab_help: Other sites only. A discussion here always opens in the same tab.
+
+      google_favicon_fallback_label: Fall back to Google for site icons
+      google_favicon_fallback_help: >
+        Used when a site offers no icon of its own. It tells Google which sites
+        your members link to.
+
+      preview_internal_links_label: Preview links to this forum
+      preview_internal_links_help: >
+        A discussion link on a line of its own becomes a card. Read from the
+        database, so nothing is fetched and nobody sees more than they could
+        already open.
+
+      skip_media_links_label: Skip links to media files
+      skip_media_links_help: For links ending in an image, audio or video file, which Flarum already renders.
+
+      max_previews_per_post_label: Previews per post
+      max_previews_per_post_help: Links past this count are left as plain links.
+
+      enable_batch_requests_label: Fetch previews in batches
+      enable_batch_requests_help: >
+        One request for the whole page instead of one per link. Turn it off only
+        if something in front of the forum rejects it.
+
+      cache_time_label: Cache duration (minutes)
+      cache_time_help: How long a preview is kept before the site is read again. 0 turns caching off.
+
+      allowlist_label: Allowed sites
+      allowlist_help: While this is not empty, only links matching it are previewed.
+      allowlist_placeholder: "docs.example.com, *.wikipedia.org"
+
+      blocklist_label: Blocked sites
+      blocklist_help: Never previewed, even when the allowed list lets them through.
+      blocklist_placeholder: "example.com, news.example.org/sponsored"
 
   forum:
-    site_cannot_be_reached: Unable to load preview. Please check the URL and try again.
+
+    loading: Loading preview
+    replies: "{count, plural, one {# reply} other {# replies}}"
+
+    # Shown only when something on the forum is counting clicks. Both the number
+    # and the decision that it is worth showing come from that extension.
+    clicks: "{count, plural, one {# click} other {# clicks}}"
+
+    # Shown in place of the card when there is nothing to show. Short, and
+    # about the link rather than about whoever posted it.
+    errors:
+      invalid_url: This address cannot be previewed.
+      blocked: Previews are turned off for this site.
+      unsafe_address: This address could not be reached safely.
+      unreachable: This site did not respond.
+      http_error: This page could not be opened.
+      not_previewable: There is no page here to preview.
+      no_metadata: This page offers nothing to preview.
+      unknown: No preview available.
+
+    settings:
+      hide_link_previews_label: Hide link previews
+      hide_link_previews_help: Show the plain address instead of a preview card in every post you read.
