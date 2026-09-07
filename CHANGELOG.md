@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1
+
+### Fixed
+
+- An address on a line of its own keeping its plain link and having its card pushed below the whole paragraph, when no blank line was left above it. Only a blank line opens a new paragraph, and the card was placed by the paragraph rather than the line.
+- The same thing over a run of addresses on consecutive lines, where every link stayed and every card stacked up underneath.
+
 ## 2.0.0
 
 Requires Flarum 2.0 and PHP 8.2. Both halves of the extension were rewritten.

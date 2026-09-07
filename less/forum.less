@@ -10,6 +10,13 @@
   display: none;
 }
 
+// The break that closed the line the card took over. The card is a block and makes
+// that break itself, so this one costs an empty line. Measured in Chromium: the
+// break that opened the line costs nothing, so it is left where the writer put it.
+.Post-body .LinkPreview-source + br {
+  display: none;
+}
+
 // The element is a `span`, because a `div` inside the `p` a post is usually
 // made of is invalid nesting, so it has to be told to behave as a block.
 .LinkPreview-container {

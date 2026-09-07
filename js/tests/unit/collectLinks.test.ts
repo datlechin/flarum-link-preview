@@ -110,6 +110,42 @@ describe('which links get a card', () => {
   });
 });
 
+describe('an address on a line of its own', () => {
+  // Only a blank line makes the formatter open a new paragraph. Without one the
+  // address shares a paragraph with the sentences around it, and reading the
+  // paragraph left the address standing with its card stranded under the lot.
+  it('stands in for an address the writer gave a line but no blank line', () => {
+    const post = body(`<p>Read this first:<br>\n${external('/a')}<br>\nMind the version.</p>`);
+    const [target] = collectPreviewTargets(post);
+
+    expect(target.mode).toBe('replace');
+    expect(target.block).toBe(post.querySelector('p'));
+  });
+
+  it('stands in for each of a run of addresses on consecutive lines', () => {
+    const targets = collect(`<p>${external('/a')}<br>\n${external('/b')}</p>`);
+
+    expect(urls(targets)).toEqual(['https://x.test/a', 'https://x.test/b']);
+    expect(targets.map((target) => target.mode)).toEqual(['replace', 'replace']);
+  });
+
+  it('reads the line through whatever the writer wrapped the address in', () => {
+    expect(collect(`<p>Read:<br><strong>${external('/a')}</strong><br>done</p>`)[0].mode).toBe('replace');
+  });
+
+  it('keeps a line that says more than the address', () => {
+    expect(collect(`<p>Read:<br>look at ${external('/a')} tonight<br>done</p>`)[0].mode).toBe('after');
+  });
+
+  it('follows a line that holds a picture beside the address', () => {
+    expect(collect(`<p>x<br>${external('/a')}<img src="https://x.test/p.png"><br>y</p>`)[0].mode).toBe('after');
+  });
+
+  it('stands in for a discussion label the writer gave a line of its own', () => {
+    expect(collect(`<p>Answered here:<br>${discussion('8')}</p>`)[0].mode).toBe('replace');
+  });
+});
+
 describe('the address a link really leads to', () => {
   it('follows a tracked link to the address in its text, not to the tracking href', () => {
     // Read as its href, no tracked link has its own address as its text, so

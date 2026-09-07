@@ -76,7 +76,7 @@ function targetFor(link: HTMLAnchorElement, postBody: HTMLElement, skipMedia: bo
   // anchor instead leaves `vnode.dom` detached, which throws on the next edit.
   if (block === postBody) return null;
 
-  const alone = isSoleContent(link, block);
+  const alone = ownsItsLine(link, block);
   const internal = isInternal(destination);
   const url = destination.href;
 
@@ -215,9 +215,47 @@ function blockOf(link: HTMLAnchorElement, postBody: HTMLElement): HTMLElement {
   return postBody;
 }
 
-function isSoleContent(link: HTMLAnchorElement, block: HTMLElement): boolean {
-  if ((block.textContent ?? '').trim() !== (link.textContent ?? '').trim()) return false;
+function ownsItsLine(link: HTMLAnchorElement, block: HTMLElement): boolean {
+  const line = lineOf(link, block);
+
+  if (line.length === 0) return false;
+
+  const text = line
+    .map((node) => node.textContent ?? '')
+    .join('')
+    .trim();
+
+  if (text !== (link.textContent ?? '').trim()) return false;
 
   // A picture beside the address would be left standing alone; one inside the link goes with it.
-  return Array.from(block.querySelectorAll(EMBEDDED)).every((element) => link.contains(element));
+  return line.every((node) => embeddedIn(node).every((element) => link.contains(element)));
+}
+
+/**
+ * The line the address stands on, not the whole block. A writer who leaves no blank
+ * line before an address has still given it a line of its own, and the formatter
+ * writes that as a `<br>` inside the paragraph rather than a paragraph of its own.
+ */
+function lineOf(link: HTMLAnchorElement, block: HTMLElement): Node[] {
+  const nodes = Array.from(block.childNodes);
+  const index = nodes.findIndex((node) => node.contains(link));
+
+  if (index === -1) return [];
+
+  let start = index;
+  let end = index;
+
+  while (start > 0 && nodes[start - 1].nodeName !== 'BR') start--;
+
+  while (end < nodes.length - 1 && nodes[end + 1].nodeName !== 'BR') end++;
+
+  return nodes.slice(start, end + 1);
+}
+
+function embeddedIn(node: Node): Element[] {
+  if (!(node instanceof Element)) return [];
+
+  const within = Array.from(node.querySelectorAll(EMBEDDED));
+
+  return node.matches(EMBEDDED) ? [node, ...within] : within;
 }
