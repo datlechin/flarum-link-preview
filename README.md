@@ -117,10 +117,10 @@ class RecipeCard implements RouteCard
 Posts and private messages are scanned already. To scan formatted HTML that your own component renders, name the component and the elements holding it:
 
 ```ts
-import LinkPreview from 'ext:datlechin/flarum-link-preview/forum/extenders/LinkPreview';
-
 app.initializers.add('acme-recipes', () => {
-  if ('datlechin-link-preview' in flarum.extensions) {
+  const LinkPreview = flarum.reg.get('datlechin-link-preview', 'forum/extenders/LinkPreview');
+
+  if (LinkPreview) {
     new LinkPreview()
       .content('ext:acme/recipes/forum/components/RecipePage', '.RecipePage-body')
       .extend(app, { name: 'acme-recipes', exports: {} });
@@ -128,6 +128,7 @@ app.initializers.add('acme-recipes', () => {
 });
 ```
 
+- Look the extender up inside the initializer, not with a top-level `ext:` import. That import resolves when your script loads, and a forum that has not re-sorted its extensions since you added Link Preview as an optional dependency loads your script first.
 - The component can be a module path, so a lazily loaded page is patched when it arrives, or the class itself.
 - The second argument is a selector matched within the component's DOM, or a function given the vnode that returns the elements.
 - Links are collected on create and update, and cards are unmounted on remove.
