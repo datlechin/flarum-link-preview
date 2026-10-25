@@ -18,16 +18,6 @@ use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * The extension as an administrator installs it, with nothing bound by hand.
- *
- * Nothing here uses {@see FakeWeb}, because a suite that replaces the resolver
- * everywhere would pass against an extension that never binds a real one.
- * `SafeFetcher` asks for the `Resolver` interface, and an interface nobody
- * bound is not instantiable, so the container is asked directly as well as
- * through the routes: a request-only test reports the same 500 for a missing
- * binding as for anything else behind the handler.
- */
 class WiresItselfUpTest extends TestCase
 {
     use PreviewsLinks;
@@ -62,9 +52,6 @@ class WiresItselfUpTest extends TestCase
     #[Test]
     public function the_endpoint_answers_with_no_help_from_the_test(): void
     {
-        // An address the forum can reject on sight, so nothing goes to the
-        // network here either, but the container still has to build the whole
-        // chain behind the controller before it can say so.
         $response = $this->preview('not a url');
 
         $this->assertSame(200, $response->getStatusCode());

@@ -16,14 +16,6 @@ use Datlechin\LinkPreview\Html\MetadataExtractor;
 use Flarum\Testing\unit\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * Every URL that leaves the extractor is absolute and points at the web.
- *
- * Pages routinely put a relative path in `og:image`, and a card handing the
- * browser `/img/card.png` renders broken against the forum's own origin.
- * `data:` and `javascript:` are dropped here rather than shipped for the
- * frontend to hide.
- */
 class ResolvesImageAndFaviconUrlsTest extends TestCase
 {
     private function extract(string $head, string $baseUrl = 'https://example.com/blog/post'): Metadata

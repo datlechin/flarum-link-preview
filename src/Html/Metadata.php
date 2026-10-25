@@ -11,17 +11,10 @@
 
 namespace Datlechin\LinkPreview\Html;
 
-/**
- * Every value is already cleaned and absolute, or `null`.
- */
 final class Metadata
 {
     private const LARGE_MIN_WIDTH = 600;
 
-    /**
-     * Outside this band an image cropped to the large card's 2:1 frame loses
-     * the part that mattered.
-     */
     private const LARGE_MIN_RATIO = 1.2;
 
     private const LARGE_MAX_RATIO = 3.0;
@@ -45,10 +38,6 @@ final class Metadata
             && $this->imageUrl === null;
     }
 
-    /**
-     * Unknown dimensions mean `compact` rather than a guess: the browser knows
-     * the natural size once the image loads and upgrades the card there.
-     */
     public function layout(): string
     {
         if ($this->imageUrl === null) {

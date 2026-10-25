@@ -11,10 +11,6 @@
 
 namespace Datlechin\LinkPreview\Preview;
 
-/**
- * Nothing renders these: a link whose preview fails keeps the plain link it
- * already was.
- */
 enum PreviewError: string
 {
     case InvalidUrl = 'invalid_url';

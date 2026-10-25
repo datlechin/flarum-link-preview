@@ -15,13 +15,6 @@ use Datlechin\LinkPreview\Html\MetadataExtractor;
 use Flarum\Testing\unit\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * Text arrives as markup and leaves as something a card can print.
- *
- * The card has two lines for a title and two for a description, so the limits
- * are there to stop a page that pastes its whole first paragraph into
- * `og:description` from being cut mid-word by the browser instead.
- */
 class CleansUpExtractedTextTest extends TestCase
 {
     private function title(string $raw): ?string
@@ -55,8 +48,6 @@ class CleansUpExtractedTextTest extends TestCase
     #[Test]
     public function invisible_spacing_characters_count_as_whitespace(): void
     {
-        // A run of non-breaking spaces is invisible once decoded, so without
-        // this the card shows a gap it cannot explain.
         $this->assertSame('One two', $this->title('One&nbsp;&nbsp;&nbsp;two'));
         $this->assertSame('One two', $this->title("One\u{200b}\u{feff} two"));
     }
@@ -91,8 +82,6 @@ class CleansUpExtractedTextTest extends TestCase
     #[Test]
     public function a_long_title_is_cut_at_a_word_boundary(): void
     {
-        // Sixty words of five characters is 299 characters, which the limit
-        // cuts inside the fortieth word; the whole word goes.
         $title = $this->title(str_repeat('word ', 60));
 
         $this->assertSame(implode(' ', array_fill(0, 39, 'word')).'…', $title);
@@ -118,8 +107,6 @@ class CleansUpExtractedTextTest extends TestCase
     #[Test]
     public function text_with_no_late_word_boundary_is_cut_mid_word(): void
     {
-        // Japanese and Chinese do not space their words, so a single early
-        // space must not throw away everything after it.
         $title = $this->title('ab '.str_repeat('x', 250));
 
         $this->assertSame(MetadataExtractor::MAX_TITLE_LENGTH, mb_strlen((string) $title));

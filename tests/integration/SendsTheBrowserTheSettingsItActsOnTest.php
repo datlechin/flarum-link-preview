@@ -14,14 +14,6 @@ namespace Datlechin\LinkPreview\Tests\integration;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * The settings the browser is handed, in the form it acts on them in.
- *
- * Some of these are decisions the frontend makes before it asks the server
- * anything: a blocked host is dropped without a request, a post stops
- * collecting links at the cap. A row that reaches the browser meaning
- * something other than what the server reads leaves the two halves disagreeing.
- */
 class SendsTheBrowserTheSettingsItActsOnTest extends TestCase
 {
     private const PREFIX = 'datlechin-link-preview.';
@@ -36,9 +28,6 @@ class SendsTheBrowserTheSettingsItActsOnTest extends TestCase
     #[Test]
     public function a_cap_of_zero_reaches_the_browser_as_the_one_the_server_enforces(): void
     {
-        // The browser reads 0 as a cap of nothing and collects no links, while
-        // the server clamps the same row to one. Sent raw, a typed zero turns
-        // every preview in the forum off.
         $this->setting(self::PREFIX.'max_previews_per_post', '0');
 
         $this->assertSame(1, $this->attribute('maxPreviewsPerPost'));
@@ -47,8 +36,6 @@ class SendsTheBrowserTheSettingsItActsOnTest extends TestCase
     #[Test]
     public function a_cap_that_is_not_a_number_reaches_it_as_the_declared_default(): void
     {
-        // A cast would have made these 0 as well, and the frontend has no way
-        // to tell a cap of nothing from a row it should not have been sent.
         $this->setting(self::PREFIX.'max_previews_per_post', '');
 
         $this->assertSame(5, $this->attribute('maxPreviewsPerPost'));
@@ -79,8 +66,6 @@ class SendsTheBrowserTheSettingsItActsOnTest extends TestCase
     #[Test]
     public function a_flag_saved_as_a_string_reaches_the_browser_as_a_flag(): void
     {
-        // Everything saved through the admin page comes back a string, and
-        // `'0'` is true to JavaScript.
         $this->setting(self::PREFIX.'skip_media_links', '1');
         $this->setting(self::PREFIX.'preview_internal_links', '0');
 

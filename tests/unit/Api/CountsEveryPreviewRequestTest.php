@@ -29,16 +29,6 @@ use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
 
-/**
- * How the ceiling is counted, and what happens when the counter cannot be
- * trusted.
- *
- * The count is taken under the store's own lock. `increment()` is not atomic
- * on `Illuminate\Cache\FileStore`, the store Flarum binds `cache.store` to, so
- * counting with it left sixty concurrent requests through on a counter reading
- * three. A count that could not be taken must turn the request away, or a
- * cache outage becomes an open proxy.
- */
 class CountsEveryPreviewRequestTest extends TestCase
 {
     #[Test]
@@ -55,9 +45,6 @@ class CountsEveryPreviewRequestTest extends TestCase
         $this->assertTrue($throttler($request), 'the request past the limit is turned away');
     }
 
-    /**
-     * @return array<string, array{string}>
-     */
     public static function theRoutesThisThrottlerOwns(): array
     {
         return [
@@ -69,9 +56,6 @@ class CountsEveryPreviewRequestTest extends TestCase
     #[Test]
     public function the_count_is_taken_with_the_stores_lock_rather_than_by_incrementing(): void
     {
-        // A version that reaches for `increment` again has to fail here rather
-        // than be found by a burst in production. The store is real so the
-        // lock is a working one; only the reads and writes are seams.
         $cache = Mockery::mock(Repository::class);
         $cache->shouldReceive('getStore')->andReturn(new ArrayStore());
         $cache->shouldReceive('get')->andReturn(null);
@@ -84,9 +68,6 @@ class CountsEveryPreviewRequestTest extends TestCase
     #[Test]
     public function a_lock_nobody_could_take_turns_the_request_away(): void
     {
-        // Waiting forever would hand an attacker a way to hold every worker
-        // open, so the wait is bounded. A request that ran out of it went
-        // uncounted, and uncounted is over the limit.
         $lock = Mockery::mock(Lock::class);
         $lock->shouldReceive('block')->andThrow(new LockTimeoutException());
 
@@ -102,8 +83,6 @@ class CountsEveryPreviewRequestTest extends TestCase
     #[Test]
     public function a_count_that_could_not_be_written_turns_the_request_away(): void
     {
-        // A write the store refused leaves the next request reading the number
-        // from before this one, so this request would have been free.
         $cache = Mockery::mock(Repository::class);
         $cache->shouldReceive('getStore')->andReturn(new ArrayStore());
         $cache->shouldReceive('get')->andReturn(null);
@@ -115,9 +94,6 @@ class CountsEveryPreviewRequestTest extends TestCase
     #[Test]
     public function a_cache_that_throws_turns_the_request_away(): void
     {
-        // Letting a dead Redis fall through would make an outage into an open
-        // proxy; letting it escape would make it a 500 on a page that could
-        // have rendered without the card.
         $cache = Mockery::mock(Repository::class);
         $cache->shouldReceive('getStore')->andThrow(new RuntimeException('Connection refused'));
 
@@ -127,16 +103,12 @@ class CountsEveryPreviewRequestTest extends TestCase
     #[Test]
     public function a_store_with_no_lock_is_still_counted(): void
     {
-        // APCu and the storage-backed store provide no lock. Neither is what
-        // Flarum installs, and neither is a reason to drop the ceiling.
         $counted = 0;
 
         $cache = Mockery::mock(Repository::class);
         $cache->shouldReceive('getStore')->andReturn(Mockery::mock(Store::class));
         $cache->shouldReceive('add')->andReturn(true);
         $cache->shouldReceive('put')->andReturn(true);
-        // A full closure rather than an arrow one, which captures by value and
-        // would answer 1 to every request.
         $cache->shouldReceive('increment')->andReturnUsing(function () use (&$counted): int {
             return ++$counted;
         });
@@ -156,8 +128,6 @@ class CountsEveryPreviewRequestTest extends TestCase
     #[DataProvider('answersThatAreNotACount')]
     public function a_store_with_no_lock_that_cannot_count_turns_the_request_away(mixed $answer): void
     {
-        // `increment` answers false on a store that cannot do it, and on a key
-        // that expired between the add and the increment. Uncounted is not free.
         $cache = Mockery::mock(Repository::class);
         $cache->shouldReceive('getStore')->andReturn(Mockery::mock(Store::class));
         $cache->shouldReceive('add')->andReturn(true);
@@ -167,9 +137,6 @@ class CountsEveryPreviewRequestTest extends TestCase
         $this->assertTrue((new LinkPreviewThrottler($cache))($this->request()));
     }
 
-    /**
-     * @return array<string, array{mixed}>
-     */
     public static function answersThatAreNotACount(): array
     {
         return [
@@ -182,9 +149,6 @@ class CountsEveryPreviewRequestTest extends TestCase
     #[Test]
     public function a_broken_cache_does_not_throttle_the_rest_of_the_forum(): void
     {
-        // Failing closed is only defensible inside this extension's own routes.
-        // The mock has no expectations, so a throttler that touched the cache
-        // before reading the route name would fail here.
         $cache = Mockery::mock(Repository::class);
 
         $throttler = new LinkPreviewThrottler($cache);

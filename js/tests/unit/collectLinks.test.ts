@@ -16,13 +16,10 @@ beforeAll(() => bootstrapForum());
 beforeEach(() => settings());
 
 function settings(attributes: Record<string, unknown> = {}) {
-  // `bootstrapForum` never boots the application, so `app.forum` is not
-  // populated and every setting read here would come back undefined.
   app.forum = app.store.createRecord('forums');
   app.forum.pushData({ id: '1', type: 'forums', attributes });
 }
 
-/** A `.Post-body`, holding the markup core actually renders. */
 function body(html: string): HTMLElement {
   const post = document.createElement('div');
 
@@ -52,12 +49,10 @@ function discussion(id: string, href = `https://f.test/d/${id}-slug`): string {
   return `<a href="${href}" class="UrlLink UrlLink--internal UrlLink--discussion" target="_self" rel="noopener"><span class="UrlLink-discussion">#${id}</span></a>`;
 }
 
-/** A tracked link, as datlechin/flarum-link-clicks leaves it once core has rendered it. */
 function tracked(text: string): string {
   return `<a href="https://f.test/lcc/track?u=TOKEN" class="LinkClicks-link" rel="ugc nofollow">${text}</a>`;
 }
 
-/** What a mounted card leaves behind: the wrapper, and the anchor it stood in for. */
 function carded(path: string): string {
   const link = `<a href="https://x.test${path}" class="LinkPreview-source" data-link-preview rel="ugc nofollow">https://x.test${path}</a>`;
 
@@ -96,9 +91,6 @@ describe('which links get a card', () => {
   });
 
   it('leaves a link with no block of its own alone', () => {
-    // A card at the top level of the body changes the node count Mithril
-    // remembers from `m.trust(contentHtml)`, and the next edit removes the
-    // wrong nodes.
     expect(collect(external('/a'))).toEqual([]);
     expect(collect(`<strong>${external('/a')}</strong>`)).toEqual([]);
   });
@@ -111,9 +103,6 @@ describe('which links get a card', () => {
 });
 
 describe('an address on a line of its own', () => {
-  // Only a blank line makes the formatter open a new paragraph. Without one the
-  // address shares a paragraph with the sentences around it, and reading the
-  // paragraph left the address standing with its card stranded under the lot.
   it('stands in for an address the writer gave a line but no blank line', () => {
     const post = body(`<p>Read this first:<br>\n${external('/a')}<br>\nMind the version.</p>`);
     const [target] = collectPreviewTargets(post);
@@ -148,8 +137,6 @@ describe('an address on a line of its own', () => {
 
 describe('the address a link really leads to', () => {
   it('follows a tracked link to the address in its text, not to the tracking href', () => {
-    // Read as its href, no tracked link has its own address as its text, so
-    // every post on a forum running link-clicks lost every preview it had.
     const targets = collect(`<p>${tracked('https://x.test/a')}</p>`);
 
     expect(urls(targets)).toEqual(['https://x.test/a']);
@@ -158,8 +145,6 @@ describe('the address a link really leads to', () => {
   });
 
   it('refuses a link core marked internal whose text names another site', () => {
-    // `[https://evil.test/x](https://f.test/u/bob)`. Believing the text here
-    // would let a post show one site's card over a link leading to another.
     expect(collect(`<p>${internal('/u/bob', 'https://evil.test/x')}</p>`)).toEqual([]);
   });
 
@@ -249,8 +234,6 @@ describe('how many cards a post may have', () => {
   });
 
   it('counts the cards the post already has, not only the ones this pass would add', () => {
-    // `onupdate` fires for something as ordinary as hovering an avatar, so a
-    // per-pass count let a post with twenty links reach twenty cards.
     settings({ 'datlechin-link-preview.maxPreviewsPerPost': 3 });
 
     const post = body(`${carded('/one')}${carded('/two')}<p>${external('/a')}</p><p>${external('/b')}</p><p>${external('/c')}</p>`);
@@ -265,9 +248,6 @@ describe('how many cards a post may have', () => {
   });
 
   it('still previews one when the limit is stored as none', () => {
-    // A stored 0 clamps to 1 here, matching `Config::previewLimit`. Reading it
-    // raw would switch previews off in the browser while the server went on
-    // serving them.
     settings({ 'datlechin-link-preview.maxPreviewsPerPost': 0 });
 
     expect(collect(`<p>${external('/a')}</p><p>${external('/b')}</p>`)).toHaveLength(1);

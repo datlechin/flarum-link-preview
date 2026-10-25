@@ -13,24 +13,12 @@ namespace Datlechin\LinkPreview\Settings;
 
 use Flarum\Settings\SettingsRepositoryInterface;
 
-/**
- * A setting saved through the admin page arrives as a string whatever the
- * extender declared, so every read is funnelled through here rather than cast
- * at the calling site.
- */
 final class Config
 {
-    /**
-     * Mirrored by the frontend queue, which chunks to the same number so a page
-     * full of links never sends a request the server would truncate.
-     */
     public const MAX_BATCH_SIZE = 20;
 
     private const PREFIX = 'datlechin-link-preview.';
 
-    /**
-     * @var array<string, mixed>
-     */
     public const DEFAULTS = [
         self::PREFIX.'enable_batch_requests' => true,
         self::PREFIX.'cache_time' => 60,
@@ -43,9 +31,6 @@ final class Config
         self::PREFIX.'max_previews_per_post' => 5,
     ];
 
-    /**
-     * A site that was down for a minute should not stay blank for an hour.
-     */
     private const MAX_NEGATIVE_CACHE_SECONDS = 600;
 
     public function __construct(private SettingsRepositoryInterface $settings)
@@ -68,17 +53,11 @@ final class Config
         return min($this->cacheSeconds(), self::MAX_NEGATIVE_CACHE_SECONDS);
     }
 
-    /**
-     * @return list<string>
-     */
     public function blocklist(): array
     {
         return $this->list('blocklist');
     }
 
-    /**
-     * @return list<string>
-     */
     public function allowlist(): array
     {
         return $this->list('allowlist');
@@ -99,19 +78,11 @@ final class Config
         return self::previewLimit($this->settings->get(self::PREFIX.'max_previews_per_post'));
     }
 
-    /**
-     * At least one: an administrator who clears the field is asking for fewer
-     * previews, not for a forum where no link ever gets one. The browser reads
-     * the same number from the forum payload and applies the same floor.
-     */
     public static function previewLimit(mixed $value): int
     {
         return is_numeric($value) ? max(1, (int) $value) : self::number('max_previews_per_post');
     }
 
-    /**
-     * @return list<string>
-     */
     private function list(string $key): array
     {
         $stored = $this->settings->get(self::PREFIX.$key);

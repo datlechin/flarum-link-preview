@@ -19,10 +19,6 @@ use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * A forum installed at localhost/forum. URLs under /forum are the forum's own,
- * the rest of the host is fetched like any other site.
- */
 class PreviewsAForumInASubdirectoryTest extends TestCase
 {
     use PreviewsLinks;
@@ -109,9 +105,6 @@ class PreviewsAForumInASubdirectoryTest extends TestCase
         $this->assertSame([$url], $this->web->requested);
     }
 
-    /**
-     * @return array<string, array{string}>
-     */
     public static function neighbours(): array
     {
         return [

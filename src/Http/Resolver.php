@@ -13,8 +13,5 @@ namespace Datlechin\LinkPreview\Http;
 
 interface Resolver
 {
-    /**
-     * @return list<string> empty when the host does not resolve
-     */
     public function resolve(string $host): array;
 }

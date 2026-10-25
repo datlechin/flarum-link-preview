@@ -16,14 +16,6 @@ use Flarum\Testing\unit\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * How big a hole the card is allowed to make in the post.
- *
- * The server only says `large` when it is sure: a page that declares a banner,
- * or one that asked for a large card outright. Everything else starts compact
- * and the browser upgrades it once the image's real size is known, because a
- * large card that turns out to hold a 16x16 sprite cannot be taken back.
- */
 class ChoosesTheCardLayoutTest extends TestCase
 {
     private function withImage(?int $width, ?int $height, bool $prefersLarge = false): Metadata
@@ -84,9 +76,6 @@ class ChoosesTheCardLayoutTest extends TestCase
         $this->assertSame('compact', $this->withImage($width, $height)->layout());
     }
 
-    /**
-     * @return array<string, array{int, int}>
-     */
     public static function compactShapes(): array
     {
         return [

@@ -17,23 +17,10 @@ use Flarum\Testing\unit\TestCase;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * Settings arrive as strings and have to be used as numbers, flags and lists.
- *
- * A row saved through the admin page is a string whatever the extender
- * declared, and a forum that never opened that page has no row at all. Every
- * read goes through here so both cases mean the same thing everywhere.
- */
 class ReadsTheStoredSettingsTest extends TestCase
 {
     private const PREFIX = 'datlechin-link-preview.';
 
-    /**
-     * Rows are stored under the real prefix, so a key read without it comes
-     * back as a missing row and the test sees the default instead.
-     *
-     * @param  array<string, mixed>  $stored
-     */
     private function config(array $stored): Config
     {
         $rows = [];
@@ -66,8 +53,6 @@ class ReadsTheStoredSettingsTest extends TestCase
     #[Test]
     public function a_list_drops_the_gaps_an_administrator_leaves(): void
     {
-        // A trailing comma and a blank line are how a list gets edited, not a
-        // rule that matches the empty string.
         $config = $this->config(['allowlist' => "example.com,\n\n , ,\ndocs.example.com,"]);
 
         $this->assertSame(['example.com', 'docs.example.com'], $config->allowlist());
@@ -122,8 +107,6 @@ class ReadsTheStoredSettingsTest extends TestCase
     #[Test]
     public function a_failure_is_remembered_for_less_time_than_a_page(): void
     {
-        // A site that was down for a minute must not stay blank for the hour a
-        // successful preview is kept for.
         $this->assertSame(600, $this->config(['cache_time' => '60'])->negativeCacheSeconds());
         $this->assertSame(600, $this->config(['cache_time' => '10080'])->negativeCacheSeconds());
     }
@@ -170,9 +153,6 @@ class ReadsTheStoredSettingsTest extends TestCase
     #[Test]
     public function a_cap_of_zero_is_read_as_a_cap_of_one(): void
     {
-        // Clearing the field or typing a zero asks for fewer previews, not for
-        // a forum where no link gets one. `extend.php` sends the same row
-        // through the clamp below, so a stored zero cannot mean two things.
         $this->assertSame(1, $this->config(['max_previews_per_post' => '0'])->maxPreviewsPerPost());
         $this->assertSame(1, $this->config(['max_previews_per_post' => 0])->maxPreviewsPerPost());
         $this->assertSame(1, $this->config(['max_previews_per_post' => '-3'])->maxPreviewsPerPost());
@@ -196,8 +176,6 @@ class ReadsTheStoredSettingsTest extends TestCase
     #[Test]
     public function the_clamp_the_two_sides_share_is_reachable_without_a_repository(): void
     {
-        // `extend.php` calls this while the extenders are being built, where
-        // there is no settings repository to hand and only the one row.
         $this->assertSame(1, Config::previewLimit('0'));
         $this->assertSame(1, Config::previewLimit(0));
         $this->assertSame(5, Config::previewLimit(null));
@@ -208,8 +186,6 @@ class ReadsTheStoredSettingsTest extends TestCase
     #[Test]
     public function the_batch_size_the_frontend_chunks_to_is_fixed(): void
     {
-        // The frontend queue chunks to the same number, so a page full of
-        // links never sends a request the server would truncate.
         $this->assertSame(20, Config::MAX_BATCH_SIZE);
     }
 }

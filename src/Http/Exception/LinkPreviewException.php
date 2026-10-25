@@ -13,11 +13,6 @@ namespace Datlechin\LinkPreview\Http\Exception;
 
 use RuntimeException;
 
-/**
- * Messages are for the log only: one in a response body would tell an SSRF
- * probe whether a host resolved, refused the connection or answered with the
- * wrong content type.
- */
 abstract class LinkPreviewException extends RuntimeException
 {
 }

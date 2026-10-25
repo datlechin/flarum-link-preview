@@ -56,15 +56,11 @@ datlechin-link-preview:
 
     loading: Loading preview
 
-    # The facts a card built from the database lists under its title. Only the
-    # counted ones need a string: the rest carry their own text or a date.
     meta:
       replies: "{count, plural, one {# reply} other {# replies}}"
       posts: "{count, plural, one {# post} other {# posts}}"
       discussions: "{count, plural, one {# discussion} other {# discussions}}"
 
-    # Shown only when something on the forum is counting clicks. Both the number
-    # and the decision that it is worth showing come from that extension.
     clicks: "{count, plural, one {# click} other {# clicks}}"
 
     settings:

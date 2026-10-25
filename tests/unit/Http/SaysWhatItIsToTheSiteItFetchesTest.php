@@ -16,13 +16,6 @@ use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * What the forum tells a site about itself when it asks for a page.
- *
- * This traffic is a robot, run by a forum, on behalf of somebody who pasted a
- * link, and a site that wants to rate limit or refuse it needs to be able to
- * see that. A `robots.txt` rule aimed at it also has to have a name to aim at.
- */
 class SaysWhatItIsToTheSiteItFetchesTest extends TestCase
 {
     use BuildsAFetcher;
@@ -44,9 +37,6 @@ class SaysWhatItIsToTheSiteItFetchesTest extends TestCase
         $this->assertStringNotContainsStringIgnoringCase($token, $this->userAgent());
     }
 
-    /**
-     * @return array<string, array{string}>
-     */
     public static function theBrowserItIsNot(): array
     {
         return [
@@ -60,9 +50,6 @@ class SaysWhatItIsToTheSiteItFetchesTest extends TestCase
     #[Test]
     public function nothing_in_it_says_which_reader_asked(): void
     {
-        // A preview is triggered by whoever is reading the post, so anything
-        // carried from that request would tell the site being previewed who is
-        // on this forum and when.
         $this->fetch();
 
         $request = $this->handler->getLastRequest();

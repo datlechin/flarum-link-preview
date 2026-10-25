@@ -37,8 +37,6 @@ return [
                 ->where('key', 'datlechin-link-preview.'.$new)
                 ->exists();
 
-            // Never overwrite: on a second run the new key holds whatever the
-            // administrator has since chosen, and the old value is stale.
             if (! $taken) {
                 $connection->table('settings')->insert([
                     'key' => 'datlechin-link-preview.'.$new,
@@ -55,8 +53,6 @@ return [
             ->delete();
     },
 
-    // The withdrawn external API rows do not come back: their values were
-    // deleted above and nothing here could invent them.
     'down' => function (Builder $schema) use ($renames): void {
         $connection = $schema->getConnection();
 

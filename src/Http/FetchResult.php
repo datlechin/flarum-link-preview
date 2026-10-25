@@ -11,10 +11,6 @@
 
 namespace Datlechin\LinkPreview\Http;
 
-/**
- * `$effectiveUrl` is the last hop of the redirect chain rather than what was
- * asked for, so it is the base a relative `og:image` resolves against.
- */
 final class FetchResult
 {
     public function __construct(

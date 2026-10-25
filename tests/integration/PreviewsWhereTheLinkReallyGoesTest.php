@@ -18,16 +18,6 @@ use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * An address is not always what the link that led to it says.
- *
- * datlechin/flarum-link-clicks rewrites a tracked link's `href` to this
- * forum's own `/lcc/track?u=` route, signed over a row id, so the destination
- * cannot be read out of the address and every link in a post looks internal.
- * The browser recovers it from the link's text and asks for that instead, so
- * the two stay distinct: the destination is fetched, the tracker route is this
- * forum and never is.
- */
 class PreviewsWhereTheLinkReallyGoesTest extends TestCase
 {
     use PreviewsLinks;
@@ -74,8 +64,6 @@ class PreviewsWhereTheLinkReallyGoesTest extends TestCase
     #[Test]
     public function a_destination_no_href_ever_named_is_previewed_at_that_destination(): void
     {
-        // What the browser sends for a tracked link: the address out of the
-        // link's text, not the `/lcc/track?u=` route its `href` carries.
         $this->web->host('good.test', self::PUBLIC_ADDRESS)
             ->page('https://good.test/article', self::article());
 
@@ -90,9 +78,6 @@ class PreviewsWhereTheLinkReallyGoesTest extends TestCase
     #[Test]
     public function the_tracking_route_is_this_forum_and_is_never_fetched(): void
     {
-        // One of this forum's own addresses. Fetching it would have the forum
-        // wait on a request the same server has to serve, and would count a
-        // click nobody made.
         $this->web->host('good.test', self::PUBLIC_ADDRESS)
             ->page('https://good.test/article', self::article());
 
@@ -103,10 +88,6 @@ class PreviewsWhereTheLinkReallyGoesTest extends TestCase
     #[Test]
     public function an_address_on_this_forum_is_answered_about_this_forum_whatever_it_carries(): void
     {
-        // The abuse case: `[https://evil.test](https://localhost/d/1)` would
-        // draw a card for evil.test out of this forum's own link. Core marks a
-        // genuinely internal link `UrlLink--internal` so the browser never
-        // asks, but should the request arrive the address decides alone.
         $this->web->host('evil.test', self::PUBLIC_ADDRESS)
             ->page('https://evil.test/', self::article());
 
@@ -120,8 +101,6 @@ class PreviewsWhereTheLinkReallyGoesTest extends TestCase
     #[Test]
     public function a_batch_of_both_is_answered_the_same_way(): void
     {
-        // A post carrying tracked links sends one batch, and the tracker route
-        // is in it whenever the browser could not recover a destination.
         $this->web->host('good.test', self::PUBLIC_ADDRESS)
             ->page('https://good.test/article', self::article());
 

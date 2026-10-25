@@ -18,13 +18,6 @@ use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * The security boundary of the extension, exercised without a network.
- *
- * Any URL a member types is one the server can be made to request, so the
- * address behind the hostname is checked before the socket is opened. The
- * resolver is a seam because the real one cannot be asked for these answers.
- */
 class RefusesUnsafeAddressesTest extends TestCase
 {
     use BuildsAFetcher;
@@ -49,15 +42,6 @@ class RefusesUnsafeAddressesTest extends TestCase
         }
     }
 
-    /**
-     * The ranges PHP's reserved and private flags cover, and the ones they do
-     * not: neither flag has heard of carrier grade NAT, protocol assignments,
-     * benchmarking or IPv6 site local, and all four are routed inside
-     * somebody's network. Listed together so a rewrite of the check cannot
-     * quietly drop half of them.
-     *
-     * @return array<string, array{string}>
-     */
     public static function addressesInsideTheNetwork(): array
     {
         return [
@@ -73,17 +57,11 @@ class RefusesUnsafeAddressesTest extends TestCase
             'anything else in this network' => ['0.1.2.3'],
             'IPv6 unique local' => ['fc00::1'],
 
-            // Loopback in the notation that gets past a check written for
-            // dotted quads.
             'the IPv4 loopback written as an IPv6 address' => ['::ffff:127.0.0.1'],
 
-            // A carrier hands these to its own subscribers, so on a hosted
-            // forum they are other people's machines on the same private path.
             'carrier grade NAT' => ['100.64.0.1'],
             'the far end of carrier grade NAT' => ['100.127.255.254'],
 
-            // 192.0.0.0/24 is IETF protocol assignments and 198.18.0.0/15 is
-            // benchmarking, both routed on internal networks.
             'protocol assignments' => ['192.0.0.1'],
             'the far end of protocol assignments' => ['192.0.0.255'],
             'benchmarking' => ['198.18.0.1'],
@@ -99,8 +77,6 @@ class RefusesUnsafeAddressesTest extends TestCase
     #[Test]
     public function the_loopback_written_as_an_ipv6_address_in_the_url_is_refused_too(): void
     {
-        // Keyed both ways, because whether the brackets are trimmed before the
-        // lookup is the fetcher's business and not what this is testing.
         $fetcher = $this->fetcher([$this->page()], new FakeResolver([
             '[::ffff:127.0.0.1]' => ['::ffff:127.0.0.1'],
             '::ffff:127.0.0.1' => ['::ffff:127.0.0.1'],
@@ -119,8 +95,6 @@ class RefusesUnsafeAddressesTest extends TestCase
     #[DataProvider('portsThePublicWebIsNotServedOn')]
     public function a_port_that_is_not_the_default_for_the_scheme_is_refused(string $url): void
     {
-        // A public host is still a way to knock on every service its operator
-        // runs, and a link preview has no business off the web port.
         $fetcher = $this->fetcher([$this->page()]);
 
         $this->expectException(UnsafeUrlException::class);
@@ -132,9 +106,6 @@ class RefusesUnsafeAddressesTest extends TestCase
         }
     }
 
-    /**
-     * @return array<string, array{string}>
-     */
     public static function portsThePublicWebIsNotServedOn(): array
     {
         return [
@@ -151,8 +122,6 @@ class RefusesUnsafeAddressesTest extends TestCase
     #[Test]
     public function the_two_ports_a_real_site_is_sometimes_served_on_are_allowed(): void
     {
-        // Ordinary enough on real sites that refusing them would cost more
-        // than it saves.
         $this->assertInstanceOf(FetchResult::class, $this->fetcher([$this->page()])->fetch('http://example.com:8080/a'));
         $this->assertInstanceOf(FetchResult::class, $this->fetcher([$this->page()])->fetch('https://example.com:8443/a'));
     }
@@ -184,8 +153,6 @@ class RefusesUnsafeAddressesTest extends TestCase
     #[Test]
     public function the_cloud_metadata_endpoint_is_refused(): void
     {
-        // The address every cloud host answers on with the credentials of the
-        // machine the forum is running on.
         $fetcher = $this->fetcher([$this->page()], new FakeResolver(['metadata.test' => ['169.254.169.254']]));
 
         $this->expectException(UnsafeUrlException::class);
@@ -220,8 +187,6 @@ class RefusesUnsafeAddressesTest extends TestCase
     #[Test]
     public function the_first_routable_address_is_the_one_used(): void
     {
-        // A host with a private address alongside a public one is ordinary in
-        // split-horizon DNS, and is not a reason to refuse the whole host.
         $fetcher = $this->fetcher(
             [$this->page()],
             new FakeResolver(['mixed.test' => ['10.0.0.5', FakeResolver::PUBLIC_ADDRESS]]),
@@ -248,9 +213,6 @@ class RefusesUnsafeAddressesTest extends TestCase
         }
     }
 
-    /**
-     * @return array<string, array{string}>
-     */
     public static function schemesThatAreNotTheWeb(): array
     {
         return [
@@ -265,9 +227,6 @@ class RefusesUnsafeAddressesTest extends TestCase
     #[Test]
     public function a_redirect_into_the_network_is_not_followed(): void
     {
-        // Guzzle revalidates nothing on a redirect, so every hop is checked
-        // the way the first one was. The queued page proves the second
-        // request was never made.
         $fetcher = $this->fetcher(
             [
                 new Response(302, ['Location' => 'http://169.254.169.254/latest/meta-data/']),

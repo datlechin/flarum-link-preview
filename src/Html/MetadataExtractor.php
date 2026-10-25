@@ -26,16 +26,8 @@ final class MetadataExtractor
 
     public const MAX_DESCRIPTION_LENGTH = 400;
 
-    /**
-     * Browsers stop believing a charset declaration after roughly a kilobyte
-     * of head.
-     */
     private const CHARSET_SNIFF_BYTES = 2048;
 
-    /**
-     * Keeps a hostile document from turning one script tag into unbounded
-     * recursion.
-     */
     private const MAX_JSON_LD_DEPTH = 4;
 
     public function extract(string $html, string $baseUrl, ?string $contentType = null): Metadata
@@ -97,8 +89,6 @@ final class MetadataExtractor
         try {
             $converted = mb_convert_encoding($html, 'UTF-8', $charset);
         } catch (ValueError) {
-            // UTF-8 to UTF-8 is not a no-op: it replaces any sequence the
-            // parser would choke on.
             $converted = mb_convert_encoding($html, 'UTF-8', 'UTF-8');
         }
 
@@ -128,7 +118,6 @@ final class MetadataExtractor
             return null;
         }
 
-        // Process-wide switch, so it is restored.
         $previous = libxml_use_internal_errors(true);
 
         $document = new DOMDocument();
@@ -140,11 +129,6 @@ final class MetadataExtractor
         return $loaded ? $document : null;
     }
 
-    /**
-     * The bytes are UTF-8 by this point, but libxml still reads the page's own
-     * charset declaration and would decode them a second time as whatever the
-     * origin claimed. A page that declares nothing it reads as ISO-8859-1.
-     */
     private function declareUtf8(string $html): string
     {
         $html = preg_replace('/^\s*<\?xml\b[^?]*\?>/i', '', $html, 1) ?? $html;
@@ -153,9 +137,6 @@ final class MetadataExtractor
         return '<?xml encoding="UTF-8">'.$html;
     }
 
-    /**
-     * @return array<string, string>
-     */
     private function metaTags(DOMXPath $xpath): array
     {
         $values = [];
@@ -187,9 +168,6 @@ final class MetadataExtractor
         return null;
     }
 
-    /**
-     * @param  array<string, string>  $meta
-     */
     private function twitterSite(array $meta): ?string
     {
         $handle = ltrim($meta['twitter:site'] ?? '', '@');
@@ -197,9 +175,6 @@ final class MetadataExtractor
         return $handle === '' ? null : $handle;
     }
 
-    /**
-     * @param  array<string, string>  $meta
-     */
     private function dimension(array $meta, string $key): ?int
     {
         $value = trim($meta[$key] ?? '');
@@ -233,9 +208,6 @@ final class MetadataExtractor
         return $best;
     }
 
-    /**
-     * Lower is a better candidate; `null` is not an icon at all.
-     */
     private function faviconRank(string $rel): ?int
     {
         $rel = strtolower(trim((string) preg_replace('/\s+/', ' ', $rel)));
@@ -261,9 +233,6 @@ final class MetadataExtractor
             ->withFragment('');
     }
 
-    /**
-     * @return list<array<array-key, mixed>>
-     */
     private function jsonLd(DOMXPath $xpath): array
     {
         $nodes = [];
@@ -281,9 +250,6 @@ final class MetadataExtractor
         return $nodes;
     }
 
-    /**
-     * @return list<array<array-key, mixed>>
-     */
     private function flattenJsonLd(mixed $value, int $depth = 0): array
     {
         if (! is_array($value) || $depth > self::MAX_JSON_LD_DEPTH) {
@@ -311,13 +277,6 @@ final class MetadataExtractor
         return $nodes;
     }
 
-    /**
-     * Each key is tried across every node before the next key is, so an
-     * `Article`'s `headline` beats a `WebSite` node's `name` no matter which
-     * came first in the graph.
-     *
-     * @param  list<array<array-key, mixed>>  $nodes
-     */
     private function jsonLdString(array $nodes, string ...$keys): ?string
     {
         foreach ($keys as $key) {
@@ -333,9 +292,6 @@ final class MetadataExtractor
         return null;
     }
 
-    /**
-     * @param  list<array<array-key, mixed>>  $nodes
-     */
     private function jsonLdPublisher(array $nodes): ?string
     {
         foreach ($nodes as $node) {
@@ -355,9 +311,6 @@ final class MetadataExtractor
         return null;
     }
 
-    /**
-     * @param  list<array<array-key, mixed>>  $nodes
-     */
     private function jsonLdImage(array $nodes): ?string
     {
         foreach ($nodes as $node) {
@@ -409,10 +362,6 @@ final class MetadataExtractor
         return $uri->getScheme() !== '' && $uri->getHost() !== '' ? $uri : null;
     }
 
-    /**
-     * `data:` and `javascript:` are dropped here rather than shipped for the
-     * frontend to hide.
-     */
     private function resolveUrl(?string $value, ?UriInterface $base): ?string
     {
         if ($value === null) {
@@ -431,8 +380,6 @@ final class MetadataExtractor
             return null;
         }
 
-        // A bare `#` resolves to the page itself: valid per RFC 3986, and a
-        // broken thumbnail as an image.
         if ($this->isSameDocument($target)) {
             return null;
         }
@@ -477,8 +424,6 @@ final class MetadataExtractor
         $cut = mb_substr($text, 0, $limit - 1);
         $boundary = mb_strrpos($cut, ' ');
 
-        // Japanese and Chinese do not space their words, so a single early
-        // space would otherwise throw the whole description away.
         if ($boundary !== false && $boundary >= intdiv($limit, 2)) {
             $cut = mb_substr($cut, 0, $boundary);
         }
@@ -486,9 +431,6 @@ final class MetadataExtractor
         return rtrim($cut, " \t\n\r\0\x0B,;:.!?-").'…';
     }
 
-    /**
-     * @return list<DOMElement>
-     */
     private function elements(DOMXPath $xpath, string $expression): array
     {
         $nodes = $xpath->query($expression);

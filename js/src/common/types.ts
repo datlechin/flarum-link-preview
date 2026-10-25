@@ -7,10 +7,6 @@ export interface PreviewImage {
   height: number | null;
 }
 
-/**
- * `key` names a locale string under `datlechin-link-preview.forum.meta`, except
- * for the two shapes that carry their own text or their own formatting.
- */
 export type MetaItem = { key: string; text: string } | { key: string; count: number } | { key: string; date: string };
 
 export interface PreviewSuccess {

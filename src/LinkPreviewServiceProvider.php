@@ -17,13 +17,6 @@ use Flarum\Foundation\AbstractServiceProvider;
 
 final class LinkPreviewServiceProvider extends AbstractServiceProvider
 {
-    /**
-     * `SafeFetcher` asks for the interface, which the container cannot build on
-     * its own, so without this every request to either endpoint answers 500.
-     *
-     * Bound rather than shared: a resolver that outlived one request would hold
-     * an answer past the point where it is still true.
-     */
     public function register(): void
     {
         $this->container->bind(Resolver::class, SystemResolver::class);

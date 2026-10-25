@@ -8,15 +8,8 @@ import LinkPreviewCard from '../../src/forum/components/LinkPreviewCard';
 import { loadPreview } from '../../src/forum/utils/previewStore';
 import type { PreviewData, PreviewSuccess } from '../../src/common/types';
 
-/**
- * Every assertion here is against the DOM a browser would be handed, because
- * that is where each of these bugs was found: a card blanked by one bare string,
- * a second anchor inside the first, a reload where a route was meant.
- */
-
 const ORIGIN = window.location.origin;
 
-/** Answers the stubbed endpoint gives back, keyed by URL. */
 const answers = new Map<string, PreviewData>();
 
 let asked = 0;
@@ -24,17 +17,12 @@ let asked = 0;
 beforeAll(() => {
   bootstrapForum();
 
-  // The test application loads core's locale and no extension's, so the strings
-  // the card puts on screen have to be added by hand.
   app.translator.addTranslations({
     'datlechin-link-preview.forum.loading': 'Loading preview',
     'datlechin-link-preview.forum.clicks': '{count, plural, one {# click} other {# clicks}}',
     'datlechin-link-preview.forum.meta.replies': '{count, plural, one {# reply} other {# replies}}',
   });
 
-  // The store under the card is the real one, so a card only reaches `ready`
-  // through a request. A URL with no answer settles as a failure, which is what
-  // the server says about a page it could not read.
   app.request = ((options: any) => {
     const data: Record<string, PreviewData> = {};
 
@@ -52,13 +40,11 @@ beforeAll(() => {
 
 beforeEach(() => forum());
 
-/** `bootstrapForum` loads a forum resource but never boots the application. */
 function forum(attributes: Record<string, unknown> = {}): void {
   app.forum = app.store.createRecord('forums');
   app.forum.pushData({ id: '1', type: 'forums', attributes: { apiUrl: `${ORIGIN}/api`, ...attributes } });
 }
 
-/** A URL nothing has asked about yet: the store remembers every answer it gets. */
 function unasked(): string {
   return `https://example.com/article-${++asked}`;
 }
@@ -83,7 +69,6 @@ async function seed(url: string, data: Partial<PreviewSuccess> = {}): Promise<vo
   await settled(url);
 }
 
-/** The anchor the card stands in for, as core would have left it in the post. */
 function anchor(href: string, attributes: Record<string, string> = {}): HTMLAnchorElement {
   const link = document.createElement('a');
 
@@ -95,9 +80,6 @@ function anchor(href: string, attributes: Record<string, string> = {}): HTMLAnch
   return link;
 }
 
-// `mq(Component, attrs)` rather than `mq(m(Component, attrs))`: reusing a single
-// vnode across redraws is a Mithril anti-pattern, and the redraw then renders
-// the stale tree, so a change made by an event never appears.
 function render(url: string, link: HTMLAnchorElement = anchor(url), internal = false) {
   return mq(LinkPreviewCard, { link, url, internal });
 }
@@ -127,13 +109,6 @@ describe('a card whose preview failed', () => {
 });
 
 describe('the row of facts under a card', () => {
-  /**
-   * The point of this test. Every item the row produces has to survive being
-   * rendered: `ItemList.toArray()` boxes a primitive so it can hang `itemName`
-   * off it, `listItems` puts that box in the `<li>`, and Mithril takes the
-   * object for a component and reads `.view` off undefined. Put one bare string
-   * back into that list and this render throws rather than shortening.
-   */
   it('renders every item of a discussion card, site and clicks and tags and author and replies and date alike', async () => {
     const url = unasked();
 
@@ -150,17 +125,13 @@ describe('the row of facts under a card', () => {
       ],
     });
 
-    // The count is read off the anchor, and only where the anchor has been
-    // replaced by the card.
     const link = anchor(url, { class: 'LinkPreview-source', 'data-clicks': '4' });
     const items = render(url, link).find('.LinkPreview-info > li');
 
     expect(items.length).toBe(6);
 
-    // Descending priorities, so the order the server sent survives the sort.
     expect(items.slice(0, 5).map((item: any) => item.textContent.trim())).toEqual(['Flarum Community', '4 clicks', 'Support', 'Alice', '12 replies']);
 
-    // The date item is a `<time>`, and its wording belongs to dayjs.
     expect(items[5].textContent.trim()).not.toBe('');
   });
 
@@ -171,7 +142,6 @@ describe('the row of facts under a card', () => {
 
     const rendered = render(url);
 
-    // A card that lost its row lost these too, and read as an empty box.
     expect(rendered.first('.LinkPreview-title').textContent).toBe('How the batch queue stranded itself');
     expect(rendered.first('.LinkPreview-excerpt').textContent).toBe('An early return left a fired timer in place.');
   });
@@ -217,7 +187,6 @@ describe('the row of facts under a card', () => {
 
     await seed(url, { title: 'Flarum Documentation', siteName: 'Flarum Documentation' });
 
-    // Otherwise the card says the same thing twice, one line above the other.
     expect(render(url).first('.LinkPreview-siteName').textContent).toBe('flarum.org');
   });
 });
@@ -236,7 +205,6 @@ describe('the anchor a card is made of', () => {
 
     const rendered = render(url);
 
-    // Issue #47: a second anchor here, and a browser unnests them silently.
     expect(rendered.find('a').length).toBe(1);
     expect(rendered.find('a.LinkPreview > .LinkPreview-media .LinkPreview-image').length).toBe(1);
     expect(rendered.find('a.LinkPreview > .LinkPreview-body .LinkPreview-info').length).toBe(1);
@@ -249,16 +217,12 @@ describe('the anchor a card is made of', () => {
 
     await seed(url, { type: 'discussion', title: 'A discussion here' });
 
-    // Core renders the link with a slug and a post number; the destination is
-    // the bare `/d/1`, so the href extends the path rather than matching it.
     const link = anchor(`${ORIGIN}/d/1-a-discussion-here/3`, { class: 'UrlLink UrlLink--internal UrlLink--discussion' });
     const rendered = render(url, link, true);
 
     expect(rendered).toHaveElement('a.LinkPreview.UrlLink--internal');
     expect(rendered.first('a').getAttribute('target')).toBe('_self');
 
-    // `UrlLink--discussion` is `white-space: nowrap`, which would flatten the
-    // line clamps, and `LinkPreview-source` would hide the card itself.
     expect(rendered).not.toHaveElement('.UrlLink--discussion');
   });
 
@@ -267,15 +231,11 @@ describe('the anchor a card is made of', () => {
 
     await seed(url, { type: 'discussion', title: 'Counted on the way out' });
 
-    // Link Clicks rewrites the href after core has stamped the class on it.
-    // Core's click handler checks nothing but the origin, so the class here
-    // would hand `/lcc/track` to a router that has no such route.
     const link = anchor('/lcc/track?u=9', { class: 'UrlLink UrlLink--internal' });
     const rendered = render(url, link, true);
 
     expect(rendered).not.toHaveElement('.UrlLink--internal');
 
-    // The href stays exactly as the tracker wrote it, so the click is counted.
     expect(rendered.first('a').getAttribute('href')).toBe('/lcc/track?u=9');
   });
 
@@ -310,8 +270,6 @@ describe('the anchor a card is made of', () => {
 describe('a click on a card pointing at the page already open', () => {
   const here = window.location.href;
 
-  // Seeded once for both tests: the store answers each URL once, and this one
-  // has to be the address bar's own.
   beforeAll(() => seed(here, { type: 'forum', title: 'The index' }));
 
   function clickCard(eventData: Record<string, unknown>) {
@@ -321,14 +279,10 @@ describe('a click on a card pointing at the page already open', () => {
 
     let prevented = false;
 
-    // Registered after Mithril's own handler, so it sees what that handler did.
     card.addEventListener('click', (event: any) => (prevented = event.defaultPrevented));
 
-    // mithril-query builds the event from this object (`new Event(name, init)`
-    // in its index.js), so it is an init, whatever its shipped types say.
     rendered.click('a.LinkPreview', { button: 0, cancelable: true, ...eventData } as unknown as Event);
 
-    // Read before restoring, which forgets the calls along with the spy.
     const routed = route.mock.calls.map(([path]) => path);
 
     route.mockRestore();
@@ -336,12 +290,6 @@ describe('a click on a card pointing at the page already open', () => {
     return { prevented, routed };
   }
 
-  /**
-   * Core's `routeInternalLinks()` gives up on an address identical to the
-   * current one so an anchor jump still works, and the browser then reloads the
-   * whole application to arrive where the reader already is. A card carries no
-   * fragment, so there is nothing to jump to.
-   */
   it('is routed rather than left to the browser', () => {
     const { prevented, routed } = clickCard({});
 
@@ -373,7 +321,6 @@ describe('a card whose image will not load', () => {
 
     rendered.trigger('.LinkPreview-image', 'error', {} as Event);
 
-    // Not a large card with a hole in it.
     expect(rendered).not.toHaveElement('.LinkPreview-media');
     expect(rendered).toHaveElement('.LinkPreview--compact');
     expect(rendered).toHaveElement('.LinkPreview-title');
@@ -381,15 +328,9 @@ describe('a card whose image will not load', () => {
 });
 
 describe('remote text a card is built from', () => {
-  /**
-   * Trojan Source pointed at a link preview: a title carrying a bidi override
-   * reorders everything after it, so a card can be made to read as one address
-   * while linking to another.
-   */
   it('is stripped of the bidi controls that would reorder the card', async () => {
     const url = 'https://example.com/invoice';
 
-    // Escaped rather than typed, so this file reads in the order it was written.
     await seed(url, {
       title: 'Invoice \u202Emoc.elpmaxe\u202C',
       description: 'Pay \u2066here\u2069',

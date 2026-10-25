@@ -19,19 +19,10 @@ use GuzzleHttp\HandlerStack;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
 
-/**
- * A fetcher with the network and DNS taken out of it.
- *
- * The handler is kept so a test can assert what was never requested: a queued
- * response still sitting in it is proof that a redirect was not followed.
- */
 trait BuildsAFetcher
 {
     private MockHandler $handler;
 
-    /**
-     * @param  list<ResponseInterface|Throwable>  $responses
-     */
     private function fetcher(array $responses, ?Resolver $resolver = null): SafeFetcher
     {
         $this->handler = new MockHandler($responses);

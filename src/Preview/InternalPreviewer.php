@@ -25,27 +25,12 @@ use Illuminate\Contracts\Filesystem\Factory;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use s9e\TextFormatter\Utils;
 
-/**
- * Answered from the database, never over the network: on a single worker the
- * fetch would wait on the request serving it, and carrying no session it would
- * show a guest a discussion they cannot read. Every lookup is scoped to the
- * reader, so a card never says more than its page would.
- *
- * @phpstan-import-type MetaItem from Preview
- */
 final class InternalPreviewer
 {
     private const MAX_DESCRIPTION_LENGTH = 400;
 
-    /**
-     * @var array{scheme: string, host: string, port: int, path: string}|null
-     */
     private ?array $origin = null;
 
-    /**
-     * `false` while unread, so a forum with no favicon is looked up once rather
-     * than once per link.
-     */
     private string|false|null $favicon = false;
 
     public function __construct(
@@ -102,7 +87,6 @@ final class InternalPreviewer
             return null;
         }
 
-        /** @var list<MetaItem> $meta */
         $meta = [];
 
         foreach ($this->tagNames($discussion, $actor) as $name) {
@@ -115,7 +99,6 @@ final class InternalPreviewer
             $meta[] = ['key' => 'author', 'text' => $author];
         }
 
-        // The count includes the opening post, which is not a reply to itself.
         $meta[] = ['key' => 'replies', 'count' => max(0, $discussion->comment_count - 1)];
         $meta[] = ['key' => 'created', 'date' => $discussion->created_at->toAtomString()];
 
@@ -130,11 +113,6 @@ final class InternalPreviewer
         );
     }
 
-    /**
-     * No description: a bio arrives with an extension that owns the rule for
-     * who may read one, and guessing it here is how a card says more than the
-     * profile would.
-     */
     private function user(string $url, string $slug, User $actor): ?Preview
     {
         $user = $this->fromSlug(User::class, $slug, $actor);
@@ -143,7 +121,6 @@ final class InternalPreviewer
             return null;
         }
 
-        /** @var list<MetaItem> $meta */
         $meta = [['key' => 'posts', 'count' => $user->comment_count]];
 
         if ($user->joined_at !== null) {
@@ -192,11 +169,6 @@ final class InternalPreviewer
         );
     }
 
-    /**
-     * The path below the forum's base path, or null if the URL is not on this
-     * forum. The scheme is ignored, and no port means the forum's port. As in
-     * core, a forum at example.com/forum does not own example.com/shop.
-     */
     private function forumPath(string $url): ?string
     {
         $parts = parse_url($url);
@@ -227,9 +199,6 @@ final class InternalPreviewer
     }
 
     /**
-     * Read through the configured slug driver rather than by column: a forum
-     * set to id slugs writes `/u/5`, which a query by username would never find.
-     *
      * @template T of AbstractModel
      *
      * @param  class-string<T>  $resource
@@ -267,13 +236,6 @@ final class InternalPreviewer
         return mb_substr($plain, 0, self::MAX_DESCRIPTION_LENGTH);
     }
 
-    /**
-     * Scoped rather than read off the discussion, so a tag the reader may not
-     * see never reaches a card as a name. `$discussion->tags` is the obvious
-     * simplification and leaks them.
-     *
-     * @return list<string>
-     */
     private function tagNames(Discussion $discussion, User $actor): array
     {
         if (! $this->extensions->isEnabled('flarum-tags')) {
@@ -287,7 +249,6 @@ final class InternalPreviewer
             ->where('discussion_tag.discussion_id', $discussion->id)
             ->orderBy('tags.position');
 
-        /** @var Tag $tag */
         foreach ($query->get(['tags.name']) as $tag) {
             $names[] = $tag->name;
         }
@@ -306,10 +267,8 @@ final class InternalPreviewer
             $path = $this->settings->get('favicon_path');
 
             if (is_string($path) && $path !== '') {
-                /** @var Factory $filesystem */
                 $filesystem = resolve(Factory::class);
 
-                /** @var Cloud $assets */
                 $assets = $filesystem->disk('flarum-assets');
 
                 $this->favicon = $assets->url($path);
@@ -321,9 +280,6 @@ final class InternalPreviewer
         return $this->favicon;
     }
 
-    /**
-     * @return array{scheme: string, host: string, port: int, path: string}
-     */
     private function origin(): array
     {
         if ($this->origin !== null) {
@@ -341,10 +297,6 @@ final class InternalPreviewer
         ];
     }
 
-    /**
-     * A host is case insensitive, may carry the root's trailing dot, and is
-     * bracketed when it is an IPv6 literal.
-     */
     private static function host(string $host): string
     {
         return trim(strtolower(rtrim(trim($host), '.')), '[]');

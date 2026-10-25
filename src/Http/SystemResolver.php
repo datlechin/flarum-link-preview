@@ -13,14 +13,10 @@ namespace Datlechin\LinkPreview\Http;
 
 final class SystemResolver implements Resolver
 {
-    /**
-     * @return list<string>
-     */
     public function resolve(string $host): array
     {
         $literal = trim($host, '[]');
 
-        // The brackets an IPv6 literal wears in a URL are not part of the address.
         if (filter_var($literal, FILTER_VALIDATE_IP) !== false) {
             return [$literal];
         }

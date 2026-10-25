@@ -13,19 +13,12 @@ namespace Datlechin\LinkPreview\Preview;
 
 use Datlechin\LinkPreview\Html\Metadata;
 
-/**
- * @phpstan-type MetaItem array{key: string, text: string}|array{key: string, count: int}|array{key: string, date: string}
- */
 final class Preview
 {
     private const TYPE_LINK = 'link';
 
     private const LAYOUT_COMPACT = 'compact';
 
-    /**
-     * @param  array{url: string, width: int|null, height: int|null}|null  $image
-     * @param  list<MetaItem>  $meta
-     */
     private function __construct(
         private readonly string $url,
         private readonly ?PreviewError $error,
@@ -59,10 +52,6 @@ final class Preview
         );
     }
 
-    /**
-     * @param  'discussion'|'user'|'tag'|'forum'  $type
-     * @param  list<MetaItem>  $meta
-     */
     public static function internal(
         string $url,
         string $type,
@@ -92,11 +81,6 @@ final class Preview
         return new self(self::echoable($url), $error);
     }
 
-    /**
-     * A failure still echoes the address it was asked about, so a `data:` or
-     * `javascript:` URL rejected for its scheme must not come back out of the
-     * endpoint.
-     */
     private static function echoable(string $url): string
     {
         $scheme = parse_url($url, PHP_URL_SCHEME);
@@ -104,9 +88,6 @@ final class Preview
         return is_string($scheme) && in_array(strtolower($scheme), ['http', 'https'], true) ? $url : '';
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     public function toArray(): array
     {
         if ($this->error !== null) {

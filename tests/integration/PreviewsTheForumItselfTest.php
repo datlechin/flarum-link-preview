@@ -15,14 +15,6 @@ use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * The forum's own front page, and the addresses on it that get no card.
- *
- * The tags extension is deliberately off here: `/t/{slug}` is an ordinary
- * address on a forum without it, and the table, the relation and the model it
- * would be read through are all missing, so the answer has to be a failure
- * rather than a fatal.
- */
 class PreviewsTheForumItselfTest extends TestCase
 {
     use PreviewsLinks;
@@ -62,8 +54,6 @@ class PreviewsTheForumItselfTest extends TestCase
     #[Test]
     public function the_index_card_names_the_host_rather_than_the_forum(): void
     {
-        // The title is already on the card. Repeating it underneath says
-        // nothing, where the address the reader is being sent to does.
         $data = $this->data($this->preview('http://localhost/'));
 
         $this->assertSame('localhost', $data['siteName']);
@@ -92,8 +82,6 @@ class PreviewsTheForumItselfTest extends TestCase
     #[Test]
     public function a_batch_carrying_that_tag_link_answers_the_rest_of_it(): void
     {
-        // A fatal here would take the whole page's previews with it, not just
-        // the one link, which is what makes the batch worth asserting on.
         $data = $this->data($this->previewBatch([
             'http://localhost/t/cooking',
             'http://localhost/',
