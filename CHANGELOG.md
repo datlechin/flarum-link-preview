@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2
+
+### Fixed
+
+- Forum in a subfolder: links to other pages on the same domain, such as `example.com/shop` next to `example.com/forum`, got no preview.
+
 ## 2.0.1
 
 ### Fixed

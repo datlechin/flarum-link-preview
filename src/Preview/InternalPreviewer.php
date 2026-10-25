@@ -56,29 +56,14 @@ final class InternalPreviewer
     ) {
     }
 
-    /**
-     * Host and port, never the scheme: the http spelling of a forum's own https
-     * link is still its own link. For the same reason a link naming no port
-     * reads as this forum's port, not the scheme's default.
-     */
     public function isInternal(string $url): bool
     {
-        $parts = parse_url($url);
-
-        if ($parts === false || ! isset($parts['host'])) {
-            return false;
-        }
-
-        $origin = $this->origin();
-        $port = $parts['port'] ?? null;
-
-        return self::host($parts['host']) === $origin['host']
-            && ($port === null || $port === $origin['port']);
+        return $this->forumPath($url) !== null;
     }
 
     public function preview(string $url, User $actor): ?Preview
     {
-        $path = $this->path($url);
+        $path = $this->forumPath($url);
 
         if ($path === null) {
             return null;
@@ -207,20 +192,29 @@ final class InternalPreviewer
         );
     }
 
-    private function path(string $url): ?string
+    /**
+     * The path below the forum's base path, or null if the URL is not on this
+     * forum. The scheme is ignored, and no port means the forum's port. As in
+     * core, a forum at example.com/forum does not own example.com/shop.
+     */
+    private function forumPath(string $url): ?string
     {
-        $path = parse_url($url, PHP_URL_PATH);
+        $parts = parse_url($url);
 
-        if ($path === false) {
+        if ($parts === false || ! isset($parts['host'])) {
             return null;
         }
 
-        $path = is_string($path) ? $path : '';
-        $base = $this->origin()['path'];
+        $origin = $this->origin();
+        $port = $parts['port'] ?? null;
 
-        // A forum installed at example.com/forum does not own example.com/d/1,
-        // so the base path has to match in full before what follows it means
-        // anything.
+        if (self::host($parts['host']) !== $origin['host'] || ($port !== null && $port !== $origin['port'])) {
+            return null;
+        }
+
+        $path = $parts['path'] ?? '';
+        $base = $origin['path'];
+
         if ($base !== '') {
             if ($path !== $base && ! str_starts_with($path, $base.'/')) {
                 return null;
