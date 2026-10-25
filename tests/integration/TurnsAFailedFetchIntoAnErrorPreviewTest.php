@@ -16,17 +16,6 @@ use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * A link that cannot be fetched is an answer, not an accident.
- *
- * Every failure path is asked for on both endpoints with the status asserted,
- * because a catch clause naming a class that does not exist silently never
- * matches and a suite that only fetches pages that are there never notices.
- *
- * `unreachable` is DNS failing, a refusal or a timeout; `http_error` is any
- * status that is not 200. Collapsing them tells a reader a working site is
- * down.
- */
 class TurnsAFailedFetchIntoAnErrorPreviewTest extends TestCase
 {
     use PreviewsLinks;
@@ -49,8 +38,6 @@ class TurnsAFailedFetchIntoAnErrorPreviewTest extends TestCase
     #[Test]
     public function a_host_that_answers_nothing_is_reported_as_unreachable(): void
     {
-        // The host resolves and nothing answers on it, which is what a refused
-        // connection and a timeout both look like from here.
         $this->web->host('gone.test', self::PUBLIC_ADDRESS);
 
         $response = $this->preview('https://gone.test/article');
@@ -75,18 +62,12 @@ class TurnsAFailedFetchIntoAnErrorPreviewTest extends TestCase
     #[DataProvider('statusesThatAreNotAPage')]
     public function a_host_that_answered_with_the_wrong_status_is_not_unreachable(int $status): void
     {
-        // A challenge page carries a title, so a fetcher that parses it caches
-        // a preview reading "Just a moment...". The host did answer, and a 404
-        // on a site that is plainly up reads as the extension being broken.
         $this->web->host('guarded.test', self::PUBLIC_ADDRESS)
             ->page('https://guarded.test/a', '<html><head><title>Just a moment...</title></head></html>', 'text/html', $status);
 
         $this->assertSame('http_error', $this->data($this->preview('https://guarded.test/a'))['error']);
     }
 
-    /**
-     * @return array<string, array{int}>
-     */
     public static function statusesThatAreNotAPage(): array
     {
         return [
@@ -136,9 +117,6 @@ class TurnsAFailedFetchIntoAnErrorPreviewTest extends TestCase
     #[Test]
     public function an_address_inside_the_network_answers_rather_than_throwing(): void
     {
-        // Raised before the socket rather than by the fetch, so this is the
-        // path most easily left uncaught. A reader who pasted a link to a
-        // router still gets a card.
         $response = $this->preview('http://192.168.1.1/setup');
 
         $this->assertSame(200, $response->getStatusCode());

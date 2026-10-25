@@ -18,13 +18,6 @@ use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * Tags, on their own card and on a discussion's.
- *
- * A restricted tag is the case worth having: its name is the thing a card
- * would say out loud, both on `/t/{slug}` and in the list under a discussion's
- * title, so both paths read the tag through `Tag::whereVisibleTo`.
- */
 class PreviewsTagsFromTheDatabaseTest extends TestCase
 {
     use PreviewsLinks;
@@ -142,7 +135,7 @@ class PreviewsTagsFromTheDatabaseTest extends TestCase
     {
         $meta = $this->meta($this->data($this->preview('http://localhost/t/cooking')));
 
-        $this->assertSame([['key' => 'discussions', 'count' => 3]], $meta);
+        $this->assertSame([['type' => 'count', 'key' => 'datlechin-link-preview.forum.meta.discussions', 'count' => 3]], $meta);
     }
 
     #[Test]
@@ -164,18 +157,16 @@ class PreviewsTagsFromTheDatabaseTest extends TestCase
         $meta = $this->meta($this->data($this->preview('http://localhost/d/1')));
 
         $this->assertCount(5, $meta);
-        $this->assertSame(['key' => 'tag', 'text' => 'Cooking'], $meta[0]);
-        $this->assertSame(['key' => 'tag', 'text' => 'Bakeware'], $meta[1]);
-        $this->assertSame(['key' => 'author', 'text' => 'normal'], $meta[2]);
-        $this->assertSame(['key' => 'replies', 'count' => 3], $meta[3]);
-        $this->assertSame('created', $meta[4]['key']);
+        $this->assertSame(['type' => 'text', 'text' => 'Cooking'], $meta[0]);
+        $this->assertSame(['type' => 'text', 'text' => 'Bakeware'], $meta[1]);
+        $this->assertSame(['type' => 'user', 'text' => 'normal'], $meta[2]);
+        $this->assertSame(['type' => 'count', 'key' => 'datlechin-link-preview.forum.meta.replies', 'count' => 3], $meta[3]);
+        $this->assertSame('date', $meta[4]['type']);
     }
 
     #[Test]
     public function a_discussion_inside_a_restricted_tag_is_a_failure_rather_than_a_card(): void
     {
-        // Core hides the discussion itself once any of its tags is one the
-        // reader may not view, so the tag name never gets as far as the list.
         $response = $this->preview('http://localhost/d/2');
 
         $this->assertSame('no_metadata', $this->data($response)['error']);
@@ -186,11 +177,9 @@ class PreviewsTagsFromTheDatabaseTest extends TestCase
     #[Test]
     public function the_tag_index_is_left_alone(): void
     {
-        // The only card this could carry is titled with the forum's own name,
-        // which tells a reader less than the address it would replace.
         $data = $this->data($this->preview('http://localhost/tags'));
 
-        $this->assertSame('no_metadata', $data['error']);
+        $this->assertSame('not_previewable', $data['error']);
         $this->assertSame([], $this->web->requested);
     }
 

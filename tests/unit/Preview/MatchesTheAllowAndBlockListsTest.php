@@ -16,10 +16,6 @@ use Flarum\Testing\unit\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * An administrator's list names sites, so it is matched against sites: every
- * entry is anchored at both ends, and a `*` in the host cannot cross a dot.
- */
 class MatchesTheAllowAndBlockListsTest extends TestCase
 {
     #[Test]
@@ -39,9 +35,6 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
         $this->assertFalse((new UrlFilter([], ['example.com']))->allows($url));
     }
 
-    /**
-     * @return array<string, array{string}>
-     */
     public static function coveredByTheHostEntry(): array
     {
         return [
@@ -63,9 +56,6 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
         $this->assertTrue((new UrlFilter([], ['example.com']))->allows($url));
     }
 
-    /**
-     * @return array<string, array{string}>
-     */
     public static function notCoveredByTheHostEntry(): array
     {
         return [
@@ -89,9 +79,6 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[Test]
     public function a_bare_entry_is_still_read_as_a_host(): void
     {
-        // A single label is a legal host, so `com` covers every `.com` address
-        // under the subdomain rule. This contradicts the contract's claim that
-        // `com` no longer blocks `example.com`; the code here is the truth.
         $this->assertFalse((new UrlFilter([], ['com']))->allows('https://example.com/x'));
     }
 
@@ -110,14 +97,9 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[DataProvider('otherWaysToWriteTheSameHost')]
     public function the_host_is_read_from_the_address_rather_than_from_the_text(string $url): void
     {
-        // Userinfo, a port and a trailing dot all reach the same site, so a
-        // filter that string-matched the text would be walked past by typing.
         $this->assertFalse((new UrlFilter([], ['example.com']))->allows($url));
     }
 
-    /**
-     * @return array<string, array{string}>
-     */
     public static function otherWaysToWriteTheSameHost(): array
     {
         return [
@@ -146,8 +128,6 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[Test]
     public function a_username_that_names_a_blocked_host_does_not_block_the_address(): void
     {
-        // This address goes to example.com, so a filter reading the userinfo
-        // as a host would refuse the wrong site.
         $this->assertTrue((new UrlFilter([], ['tracker.test']))->allows('https://tracker.test@example.com/a'));
     }
 
@@ -169,8 +149,6 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[Test]
     public function a_path_entry_is_matched_against_the_path_and_nothing_after_it(): void
     {
-        // A query string is where somebody else's address ends up and a
-        // fragment never reaches the server, so neither is part of a rule.
         $filter = new UrlFilter([], ['example.com/blog']);
 
         $this->assertFalse($filter->allows('https://example.com/blog#introduction'));
@@ -183,8 +161,6 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[Test]
     public function a_path_entry_is_matched_in_one_case(): void
     {
-        // An administrator writing a rule cannot know which case a link will
-        // arrive in, and a host is already case insensitive.
         $filter = new UrlFilter([], ['example.com/Blog']);
 
         $this->assertFalse($filter->allows('https://example.com/blog/post'));
@@ -194,8 +170,6 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[Test]
     public function an_entry_with_a_path_does_not_reach_into_subdomains(): void
     {
-        // A path only means something on the host it was written for, so this
-        // entry is not the shorthand for a site that the bare host entry is.
         $filter = new UrlFilter([], ['example.com/blog']);
 
         $this->assertTrue($filter->allows('https://cdn.example.com/blog'));
@@ -254,8 +228,6 @@ class MatchesTheAllowAndBlockListsTest extends TestCase
     #[Test]
     public function an_empty_entry_matches_nothing(): void
     {
-        // A trailing comma in the settings field is not a rule to block the
-        // whole forum with.
         $filter = new UrlFilter([], ['', '   ']);
 
         $this->assertTrue($filter->allows('https://example.com/a'));

@@ -13,19 +13,22 @@ namespace Datlechin\LinkPreview;
 
 use Datlechin\LinkPreview\Http\Resolver;
 use Datlechin\LinkPreview\Http\SystemResolver;
+use Datlechin\LinkPreview\Internal\RouteCards;
+use Datlechin\LinkPreview\Preview\InternalPreviewer;
 use Flarum\Foundation\AbstractServiceProvider;
+use Flarum\Http\RouteCollection;
+use Illuminate\Contracts\Container\Container;
 
 final class LinkPreviewServiceProvider extends AbstractServiceProvider
 {
-    /**
-     * `SafeFetcher` asks for the interface, which the container cannot build on
-     * its own, so without this every request to either endpoint answers 500.
-     *
-     * Bound rather than shared: a resolver that outlived one request would hold
-     * an answer past the point where it is still true.
-     */
     public function register(): void
     {
         $this->container->bind(Resolver::class, SystemResolver::class);
+
+        $this->container->singleton(RouteCards::class);
+
+        $this->container->when(InternalPreviewer::class)
+            ->needs(RouteCollection::class)
+            ->give(fn (Container $container) => $container->make('flarum.forum.routes'));
     }
 }

@@ -16,14 +16,6 @@ use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * Which addresses the forum is willing to open a connection to.
- *
- * Every case here is a request a stranger can cause by posting a link, so each
- * one checks both halves: the answer the reader gets, and whether anything left
- * the server on the way to it. A rule that produces the right error after
- * making the connection is no rule at all.
- */
 class FiltersAddressesTest extends TestCase
 {
     use PreviewsLinks;
@@ -52,9 +44,6 @@ class FiltersAddressesTest extends TestCase
         $this->assertSame('invalid_url', $this->data($response)['error']);
         $this->assertSame([], $this->web->requested);
 
-        // An error card puts what it was given on screen and links to it, so
-        // anything that is not plain http or https comes back empty. The
-        // client keys its cards by the address it asked with, not by this.
         $this->assertSame('', $this->data($response)['url']);
     }
 
@@ -63,11 +52,8 @@ class FiltersAddressesTest extends TestCase
     {
         $this->web->host('gone.test', self::PUBLIC_ADDRESS);
 
-        // An ordinary failure keeps its address: there is nothing wrong with
-        // the URL, only with what answered at it.
         $this->assertSame('https://gone.test/a', $this->data($this->preview('https://gone.test/a'))['url']);
 
-        // A scheme the browser would execute does not.
         $this->assertSame('', $this->data($this->preview('javascript:alert(1)'))['url']);
         $this->assertSame('', $this->data($this->preview('data:text/html,<script>alert(1)</script>'))['url']);
     }
@@ -75,8 +61,6 @@ class FiltersAddressesTest extends TestCase
     #[Test]
     public function a_scheme_the_forum_does_not_fetch_is_reported_as_invalid(): void
     {
-        // A well formed URL, so the check that rejects it is the scheme check
-        // rather than the syntax one.
         $this->assertSame('invalid_url', $this->data($this->preview('ftp://example.test/notes.txt'))['error']);
         $this->assertSame([], $this->web->requested);
     }
@@ -93,8 +77,6 @@ class FiltersAddressesTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame('blocked', $this->data($response)['error']);
 
-        // The page was there to be fetched, so an empty log is the filter
-        // working rather than the fixture being missing.
         $this->assertSame([], $this->web->requested);
     }
 
@@ -122,8 +104,6 @@ class FiltersAddressesTest extends TestCase
     #[Test]
     public function an_allowlisted_host_is_still_previewed(): void
     {
-        // Without this the test above would pass just as well against a filter
-        // that blocked everything.
         $this->setting('datlechin-link-preview.allowlist', 'good.test');
         $this->web->host('good.test', self::PUBLIC_ADDRESS)
             ->page('https://good.test/a', self::article());
@@ -139,8 +119,6 @@ class FiltersAddressesTest extends TestCase
     #[DataProvider('otherWaysToWriteTheSameHost')]
     public function a_blocked_host_is_blocked_however_the_address_spells_it(string $url): void
     {
-        // A rule names a site and all of these reach the site it named, so a
-        // filter comparing text up to the first slash is walked past by typing.
         $this->setting('datlechin-link-preview.blocklist', 'tracker.test');
         $this->web->host('tracker.test', self::PUBLIC_ADDRESS)
             ->page($url, self::article());
@@ -149,9 +127,6 @@ class FiltersAddressesTest extends TestCase
         $this->assertSame([], $this->web->requested);
     }
 
-    /**
-     * @return array<string, array{string}>
-     */
     public static function otherWaysToWriteTheSameHost(): array
     {
         return [
@@ -167,9 +142,6 @@ class FiltersAddressesTest extends TestCase
     #[Test]
     public function a_blocklisted_host_is_still_blocked_one_redirect_away(): void
     {
-        // A redirect is the one place a stranger gets to choose the second
-        // address, so a list checked only against the first is a list with a
-        // way round it: link to a host nobody blocked and have it point on.
         $this->setting('datlechin-link-preview.blocklist', 'tracker.test');
 
         $this->web->host('hop.test', self::PUBLIC_ADDRESS)
@@ -179,9 +151,6 @@ class FiltersAddressesTest extends TestCase
 
         $this->assertSame('blocked', $this->data($this->preview('https://hop.test/go'))['error']);
 
-        // The blocked page was there to be fetched and the first hop was
-        // answered, so this is the filter stopping the second one. Discarding
-        // the answer afterwards would still have told the tracker who and when.
         $this->assertSame(
             ['https://hop.test/go'],
             $this->web->requested,
@@ -210,8 +179,6 @@ class FiltersAddressesTest extends TestCase
     #[Test]
     public function a_redirect_that_stays_inside_the_allowlist_is_followed(): void
     {
-        // Without this the test above would pass just as well against a
-        // version that refused every redirect.
         $this->setting('datlechin-link-preview.allowlist', 'good.test');
 
         $this->web->host('good.test', self::PUBLIC_ADDRESS)
@@ -244,8 +211,6 @@ class FiltersAddressesTest extends TestCase
     #[Test]
     public function a_public_name_pointing_into_the_private_network_is_refused(): void
     {
-        // The case the address check exists for: nothing about the URL says
-        // anything is wrong, and only the answer DNS gave does.
         $this->web->host('holiday-photos.test', '10.0.0.5');
 
         $this->assertSame('unsafe_address', $this->data($this->preview('https://holiday-photos.test/'))['error']);

@@ -11,10 +11,6 @@
 
 namespace Datlechin\LinkPreview\Http\Exception;
 
-/**
- * The exception code carries the HTTP status when a site answered, and stays
- * at zero when nothing did.
- */
 final class FetchFailedException extends LinkPreviewException
 {
 }

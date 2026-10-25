@@ -17,17 +17,6 @@ use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 
-/**
- * The ceiling on how often one reader may ask the forum to fetch remote pages.
- *
- * Reading costs one batch request per page view, so the limit is far above
- * anything a person produces. Reaching it means asking for addresses nobody has
- * asked for before, which is what using a forum as a port scanner looks like.
- *
- * A throttler is handed every API request, so one that answers for routes it
- * knows nothing about would either throttle the whole forum or, by returning
- * false, exempt it from everybody else's limits.
- */
 class ThrottlesPreviewRequestsTest extends TestCase
 {
     use PreviewsLinks;
@@ -66,10 +55,6 @@ class ThrottlesPreviewRequestsTest extends TestCase
         $this->assertSame(200, $this->send($this->request('GET', '/api/'))->getStatusCode());
     }
 
-    /**
-     * One request against the budget, costing nothing but the count: an address
-     * that is rejected before the filters, let alone the network.
-     */
     private function exhaust(): ResponseInterface
     {
         return $this->preview('nonsense');

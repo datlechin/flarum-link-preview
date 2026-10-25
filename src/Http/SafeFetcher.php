@@ -30,18 +30,8 @@ use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
 use Throwable;
 
-/**
- * Redirects are followed here rather than by Guzzle, which would revalidate
- * nothing: `Location: http://169.254.169.254/` from a host that passed every
- * check is the whole attack, so every hop is checked the way the first was.
- */
 final class SafeFetcher
 {
-    /**
-     * Measured byte offset of `</head>`: GitHub 31KB, YouTube 713KB, which
-     * inlines a very large script ahead of its meta tags. The read stops at
-     * `</head>`, so a cap this high costs a normal page nothing.
-     */
     public const MAX_BYTES = 1048576;
 
     public const MAX_REDIRECTS = 3;
@@ -50,19 +40,11 @@ final class SafeFetcher
 
     private const CHUNK_BYTES = 8192;
 
-    /** The cURL options bound the transport; an injected client's is not ours to bound. */
     private const READ_SECONDS = 5;
 
-    /**
-     * A trickle, not a budget. TIMEOUT is the real bound; these only hang up
-     * early on a connection that has stopped delivering. The allowance is
-     * deliberately slack so a site that thinks for a few seconds before it
-     * answers is not cut off.
-     */
     private const MIN_BYTES_PER_SECOND = 256;
     private const STALL_SECONDS = 5;
 
-    /** cURL's `CURLE_ABORTED_BY_CALLBACK`, which is defined only with ext-curl. */
     private const CURL_ABORTED_BY_CALLBACK = 42;
 
     private const REDIRECT_STATUSES = [301, 302, 303, 307, 308];
@@ -71,40 +53,20 @@ final class SafeFetcher
 
     private const MAPPED_IPV4_PREFIX = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
 
-    /**
-     * Ranges `filter_var()` admits anyway. Its flags cover loopback, link local
-     * and RFC1918, and the exact list beyond that moves between PHP builds.
-     */
     private const BLOCKED_RANGES = [
-        // The local host to most stacks, and Linux routes the rest there too.
         '0.0.0.0' => 8,
-        // Carrier grade NAT: the ISP's own network, and cloud node networks.
         '100.64.0.0' => 10,
-        // IETF protocol assignments: 192.0.0.192 and the rest of the addresses
-        // infrastructure answers on rather than hosts.
         '192.0.0.0' => 24,
-        // Benchmarking: test interfaces on network gear, reachable from inside.
         '198.18.0.0' => 15,
-        // Reserved, including the 255.255.255.255 broadcast.
         '240.0.0.0' => 4,
-        // IPv6 site local: deprecated, and not covered by the private flag.
         'fec0::' => 10,
-        // NAT64: 64:ff9b::7f00:1 is loopback with an extra hop.
         '64:ff9b::' => 96,
-        // Multicast: 239.255.255.250 is every UPnP device in the rack.
         '224.0.0.0' => 4,
         'ff00::' => 8,
-        // 6to4: 2002:7f00:1:: is loopback behind a tunnel.
         '2002::' => 16,
-        // IPv4-compatible IPv6: the reserved flag refuses `::10.0.0.5` and
-        // admits `::a00:5`, the same sixteen bytes.
         '::' => 96,
     ];
 
-    /**
-     * Measured: facebook.com answers 400 to a desktop Chrome agent arriving
-     * from a server and 200 to a bot that names itself.
-     */
     private const USER_AGENT = 'Mozilla/5.0 (compatible; FlarumLinkPreview/1.0; +https://github.com/datlechin/flarum-link-preview)';
 
     private readonly bool $capsBodyInSink;
@@ -114,9 +76,6 @@ final class SafeFetcher
         $this->capsBodyInSink = $client === null && ! extension_loaded('curl');
     }
 
-    /**
-     * @throws LinkPreviewException
-     */
     public function fetch(string $url, ?callable $guard = null): FetchResult
     {
         $result = $this->fetchMany([$url], $guard)[$url];
@@ -128,12 +87,6 @@ final class SafeFetcher
         return $result;
     }
 
-    /**
-     * @param list<string> $urls
-     * @param null|callable(string): bool $guard run against every hop, redirect targets included
-     *
-     * @return array<string, FetchResult|LinkPreviewException> keyed by the input url
-     */
     public function fetchMany(array $urls, ?callable $guard = null): array
     {
         $results = [];
@@ -145,7 +98,6 @@ final class SafeFetcher
         }
 
         for ($hop = 0; $pending !== []; $hop++) {
-            /** @var array<string, PromiseInterface> $promises */
             $promises = [];
 
             foreach ($pending as $requested => $url) {
@@ -154,10 +106,6 @@ final class SafeFetcher
                 } catch (LinkPreviewException $exception) {
                     $results[$requested] = $exception;
                 } catch (MalformedUriException $exception) {
-                    // `http://good.test:+80/a` satisfies parse_url and every
-                    // check above, then is refused by Guzzle's URI parser here
-                    // rather than inside the promise: uncaught it takes the
-                    // rest of the batch with it.
                     $results[$requested] = new UnsafeUrlException("Refusing to fetch $url, which is not a URL.", 0, $exception);
                 }
             }
@@ -210,7 +158,6 @@ final class SafeFetcher
 
         $ordered = [];
 
-        // $results is filled in the order rounds settled, not the caller's.
         foreach ($urls as $url) {
             $ordered[$url] = $results[$url];
         }
@@ -223,17 +170,8 @@ final class SafeFetcher
         return $this->client ??= new Client($this->clientConfig());
     }
 
-    /**
-     * Left alone, Guzzle wraps the cURL handler in a streaming proxy whenever
-     * `allow_url_fopen` is on, and that proxy's stream handler ignores the
-     * `curl` option the CURLOPT_RESOLVE pin rides on, besides being synchronous.
-     *
-     * @return array<string, mixed>
-     */
     private function clientConfig(): array
     {
-        // Without cURL there is no pin to land. The address check still runs
-        // before every hop, so what is missing is the rebinding window, not the rule.
         if (! extension_loaded('curl')) {
             return [];
         }
@@ -241,9 +179,6 @@ final class SafeFetcher
         return ['handler' => HandlerStack::create(new CurlMultiHandler())];
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     private function optionsFor(string $url, ?callable $guard): array
     {
         $scheme = parse_url($url, PHP_URL_SCHEME);
@@ -258,7 +193,6 @@ final class SafeFetcher
             throw new UnsafeUrlException("Refusing to fetch $url, which names no host.");
         }
 
-        // Before the lookup, so a hop the caller refuses costs no DNS.
         if ($guard !== null && ! $guard($url)) {
             throw new UnsafeUrlException("Refusing to fetch $url, which the caller declined.");
         }
@@ -279,13 +213,6 @@ final class SafeFetcher
         return $options;
     }
 
-    /**
-     * `verify` is never turned off: an unverified TLS connection would let
-     * anyone on the path choose what the forum caches under someone else's
-     * domain.
-     *
-     * @return array<string, mixed>
-     */
     private function options(): array
     {
         $options = [
@@ -294,10 +221,7 @@ final class SafeFetcher
             'verify' => true,
             'timeout' => self::TIMEOUT,
             'connect_timeout' => self::CONNECT_TIMEOUT,
-            // The transport's own allow list, below the scheme check above.
             'protocols' => ['http', 'https'],
-            // The byte cap counts wire bytes, so a content encoding would let
-            // a few compressed kilobytes expand past it.
             'decode_content' => false,
             'headers' => [
                 'User-Agent' => self::USER_AGENT,
@@ -306,7 +230,6 @@ final class SafeFetcher
             ],
         ];
 
-        // Fresh per request: the same sink handed to two of them would interleave.
         if ($this->capsBodyInSink) {
             $options['sink'] = CappedSink::ofBytes(self::MAX_BYTES);
         }
@@ -314,29 +237,17 @@ final class SafeFetcher
         return $options;
     }
 
-    /**
-     * @return array<int, mixed>
-     */
     private function curlOptions(string $host, int $port, string $ip): array
     {
         $options = [
-            // Pin the address just validated, against a record that rebinds
-            // between the lookup and the connect.
             CURLOPT_RESOLVE => [$this->pin($host, $port, $ip)],
-            // A body arriving a few bytes at a time never trips the byte cap.
             CURLOPT_LOW_SPEED_LIMIT => self::MIN_BYTES_PER_SECOND,
             CURLOPT_LOW_SPEED_TIME => self::STALL_SECONDS,
         ];
 
-        // cURL hands Guzzle the whole body before resolving the promise, so
-        // only aborting the transfer can stop a gigabyte. Both options are
-        // deprecated in guzzle 7.11 and rejected by 8.0, which points at the
-        // `progress` option: not a replacement, because Guzzle throws away
-        // what that callback returns.
         if (defined('CURLOPT_XFERINFOFUNCTION')) {
             $options[CURLOPT_NOPROGRESS] = false;
             $options[CURLOPT_XFERINFOFUNCTION] = static function (mixed $handle, int $expected, int $downloaded): int {
-                // Anything but zero aborts the transfer.
                 return $downloaded > self::MAX_BYTES ? 1 : 0;
             };
         }
@@ -344,11 +255,6 @@ final class SafeFetcher
         return $options;
     }
 
-    /**
-     * cURL matches on the host as the URL spells it, without brackets for an
-     * IPv6 literal, and wants the address with them: `::1:443:[::1]`. Either
-     * half the other way round is a pin that is not pinning.
-     */
     private function pin(string $host, int $port, string $ip): string
     {
         $name = trim($host, '[]');
@@ -357,11 +263,6 @@ final class SafeFetcher
         return "$name:$port:$address";
     }
 
-    /**
-     * Left open, a posted link times the answer from any port of any host,
-     * which maps what is listening from the forum's own address. Two ports
-     * beyond the scheme default, because a real site is occasionally on one.
-     */
     private function allowedPortFor(string $url, string $scheme): int
     {
         $default = $scheme === 'https' ? 443 : 80;
@@ -399,8 +300,6 @@ final class SafeFetcher
 
         $ip = $this->unwrapMappedIpv4($ip);
 
-        // Reserved covers loopback and link local, where the cloud metadata
-        // endpoint at 169.254.169.254 lives; private covers the operator's LAN.
         if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE | FILTER_FLAG_NO_PRIV_RANGE) === false) {
             return null;
         }
@@ -414,7 +313,6 @@ final class SafeFetcher
         return $ip;
     }
 
-    /** `::ffff:127.0.0.1` is loopback in an IPv6 coat; the ranges above are per family. */
     private function unwrapMappedIpv4(string $ip): string
     {
         $packed = inet_pton($ip);
@@ -453,10 +351,6 @@ final class SafeFetcher
         return ($address[$whole] & $mask) === ($network[$whole] & $mask);
     }
 
-    /**
-     * An aborted transfer arrives as a rejection carrying the headers and the
-     * bytes that did land, and the front of a document is all a preview wanted.
-     */
     private function cappedResponse(mixed $reason): ?ResponseInterface
     {
         if (! $reason instanceof RequestException) {
@@ -473,7 +367,6 @@ final class SafeFetcher
             return null;
         }
 
-        // Guzzle rewinds only a body whose transfer finished.
         $body = $response->getBody();
 
         if ($body->isSeekable()) {
@@ -489,7 +382,6 @@ final class SafeFetcher
             return null;
         }
 
-        // getHeaderLine() would join two Location headers into a third that is neither.
         $location = $response->getHeader('Location')[0] ?? '';
 
         if ($location === '') {
@@ -525,10 +417,6 @@ final class SafeFetcher
         );
     }
 
-    /**
-     * Content-Length is not consulted: it is optional, it lies, and it says
-     * nothing about a chunked response.
-     */
     private function readHead(ResponseInterface $response, string $url): string
     {
         $stream = $response->getBody();
@@ -543,7 +431,6 @@ final class SafeFetcher
 
                 $chunk = $stream->read(self::CHUNK_BYTES);
 
-                // A stream may return nothing without being at its end.
                 if ($chunk === '') {
                     break;
                 }

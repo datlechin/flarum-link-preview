@@ -25,13 +25,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\StreamInterface;
 
-/**
- * What the fetcher agrees to hand back, and how much of it it reads.
- *
- * The status code is the important half: a Cloudflare challenge arrives as a
- * 403 carrying a perfectly parseable title, so a fetcher that parses whatever
- * comes back caches a preview reading "Just a moment...".
- */
 class ReadsOnlyTheHeadOfAPageTest extends TestCase
 {
     use BuildsAFetcher;
@@ -75,9 +68,6 @@ class ReadsOnlyTheHeadOfAPageTest extends TestCase
     #[DataProvider('statusesThatAreNotAPage')]
     public function only_a_two_hundred_carries_a_page(int $status): void
     {
-        // The base class, because all this asserts is that nothing was handed
-        // back to be parsed. Which subclass decides between `unreachable` and
-        // `http_error` on the card is pinned in the integration suite.
         $fetcher = $this->fetcher([new Response($status, ['Content-Type' => 'text/html'], self::HTML)]);
 
         $this->expectException(LinkPreviewException::class);
@@ -85,9 +75,6 @@ class ReadsOnlyTheHeadOfAPageTest extends TestCase
         $fetcher->fetch('https://example.com/a');
     }
 
-    /**
-     * @return array<string, array{int}>
-     */
     public static function statusesThatAreNotAPage(): array
     {
         return [
@@ -114,9 +101,6 @@ class ReadsOnlyTheHeadOfAPageTest extends TestCase
         $fetcher->fetch('https://example.com/a');
     }
 
-    /**
-     * @return array<string, array{string}>
-     */
     public static function contentTypesWithoutMetadata(): array
     {
         return [
@@ -149,8 +133,6 @@ class ReadsOnlyTheHeadOfAPageTest extends TestCase
 
         $result = $fetcher->fetch('https://example.com/a');
 
-        // The last hop is the base a relative `og:image` resolves against, and
-        // it is the address the card links to.
         $this->assertSame('https://elsewhere.test/final', $result->effectiveUrl);
         $this->assertResponsesLeft(0);
     }
@@ -200,9 +182,6 @@ class ReadsOnlyTheHeadOfAPageTest extends TestCase
     #[Test]
     public function the_cap_on_one_body_is_a_mebibyte(): void
     {
-        // Twenty of these can be in flight for one batch request, so the
-        // number is also the ceiling on what a single page view can make the
-        // forum hold in memory at once.
         $this->assertSame(1048576, SafeFetcher::MAX_BYTES);
     }
 
@@ -217,8 +196,6 @@ class ReadsOnlyTheHeadOfAPageTest extends TestCase
 
         $this->assertSame(SafeFetcher::MAX_BYTES, strlen($result->body));
 
-        // The rest was never pulled off the wire: the cap is a memory bound,
-        // not a substr.
         $this->assertSame(SafeFetcher::MAX_BYTES, $stream->tell());
         $this->assertFalse($stream->eof());
     }

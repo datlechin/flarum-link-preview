@@ -52,15 +52,10 @@ final class Previewer
         }
     }
 
-    /**
-     * @param  list<string>  $urls
-     * @return array<string, Preview>
-     */
     public function previewMany(array $urls, User $actor): array
     {
         $previews = [];
 
-        /** @var array<string, true> $pending */
         $pending = [];
 
         foreach ($urls as $url) {
@@ -112,9 +107,7 @@ final class Previewer
                 return Preview::error($url, PreviewError::NotPreviewable);
             }
 
-            // Not cached: what it is allowed to say depends on who is asking.
-            return $this->internal->preview($url, $actor)
-                ?? Preview::error($url, PreviewError::NoMetadata);
+            return $this->internal->preview($url, $actor);
         }
 
         return $this->cached($url);
@@ -122,8 +115,6 @@ final class Previewer
 
     private function fromResult(string $url, FetchResult $result): Preview
     {
-        // Backstop: the hop was checked before it was requested, but a fetcher
-        // that ignored the guard must not turn a blocklisted host into a card.
         if (! $this->filter()->allows($result->effectiveUrl)) {
             return $this->fail($url, PreviewError::Blocked);
         }
@@ -160,10 +151,6 @@ final class Previewer
         });
     }
 
-    /**
-     * The status rides on the exception's code, which a failure that never got
-     * an answer leaves at zero.
-     */
     private static function answered(?LinkPreviewException $exception): bool
     {
         $status = $exception === null ? 0 : $exception->getCode();
@@ -171,12 +158,6 @@ final class Previewer
         return $status >= 100 && $status <= 599;
     }
 
-    /**
-     * Refuses by throwing, never by returning false: a throw carries the reason
-     * out of a batch attached to the URL that was asked for.
-     *
-     * @return callable(string): bool
-     */
     private function hopFilter(): callable
     {
         $filter = $this->filter();
@@ -211,9 +192,6 @@ final class Previewer
         return self::decode($this->cache->get(self::key($url)));
     }
 
-    /**
-     * @param  array<string, scalar|null>  $entry
-     */
     private function store(string $url, array $entry, int $seconds): void
     {
         if ($seconds > 0) {
@@ -221,10 +199,6 @@ final class Previewer
         }
     }
 
-    /**
-     * Entries outlive deploys, so an entry written to an older shape has to
-     * read as a miss rather than fatal on somebody's page load.
-     */
     private static function decode(mixed $entry): ?Preview
     {
         if (! is_array($entry)) {
@@ -267,10 +241,6 @@ final class Previewer
         return is_int($value) ? $value : null;
     }
 
-    /**
-     * A cache driver is free to give a boolean back as `1` or `"1"`, which a
-     * strict comparison against `true` would read as false.
-     */
     private static function flag(mixed $value): bool
     {
         return $value === true || $value === 1 || $value === '1';
@@ -281,10 +251,6 @@ final class Previewer
         return self::CACHE_PREFIX.sha1(self::canonical($url));
     }
 
-    /**
-     * Keeps the scheme, or `http://example.com` and `https://example.com` share
-     * one cache entry and hand each other's readers the wrong card.
-     */
     private static function canonical(string $url): string
     {
         $parts = parse_url($url);

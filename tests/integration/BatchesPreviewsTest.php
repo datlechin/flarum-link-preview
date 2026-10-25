@@ -16,14 +16,6 @@ use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * One request for a whole page of links.
- *
- * The client holds its cards in a map keyed by the href it read out of the
- * post, so the answer has to come back under the same strings it asked with.
- * Anything the server does to an address on the way through, lowercasing a
- * host or dropping a default port, has to stay on the server.
- */
 class BatchesPreviewsTest extends TestCase
 {
     use PreviewsLinks;
@@ -47,9 +39,6 @@ class BatchesPreviewsTest extends TestCase
         $this->web->host('example.test', '93.184.216.34')
             ->page('https://example.test/one', self::article());
 
-        // The second entry is the same page after canonicalisation, so a server
-        // that answered under its own idea of the address would collapse the
-        // two and leave one card on the page waiting forever.
         $urls = [
             'https://example.test/one',
             'https://EXAMPLE.test/one',
@@ -69,8 +58,6 @@ class BatchesPreviewsTest extends TestCase
     #[Test]
     public function urls_past_the_cap_are_dropped_rather_than_refused(): void
     {
-        // A post with fifty links is a reason to preview less of it, not a
-        // reason to show the reader an error where the cards should be.
         $urls = array_map(fn (int $n): string => "nonsense-$n", range(1, Config::MAX_BATCH_SIZE + 5));
 
         $response = $this->previewBatch($urls);

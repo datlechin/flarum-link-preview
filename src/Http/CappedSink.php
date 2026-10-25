@@ -15,12 +15,6 @@ use GuzzleHttp\Psr7\StreamDecoratorTrait;
 use GuzzleHttp\Psr7\Utils;
 use Psr\Http\Message\StreamInterface;
 
-/**
- * `Utils::copyToStream()` gives up as soon as a write is refused, so a short
- * write is what bounds a body on the transport with no progress callback to
- * abort from. The bound is loose: the copy notices a full sink only after the
- * buffer it holds, so up to one 8KB read past the cap crosses the wire.
- */
 final class CappedSink implements StreamInterface
 {
     use StreamDecoratorTrait;

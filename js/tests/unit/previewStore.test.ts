@@ -2,19 +2,6 @@ import { jest } from '@jest/globals';
 
 import type { PreviewSuccess } from '../../src/common/types';
 
-/**
- * The layer between a card and the network.
- *
- * A page of posts mounts one card per link and every one of them asks on its
- * own, so this is where the asking is made sane. Two things go wrong quietly
- * here and neither shows up as an error: the same URL fetched once per card,
- * and a queue that stops draining. The second shipped. An early return in
- * `flush` left an already fired timer handle in place, `schedule` read that as
- * a flush already booked, and every URL queued after it stayed a skeleton for
- * the life of the page.
- */
-
-// Mirrors the module's own constants, which it does not export.
 const FLUSH_DELAY = 50;
 const FLUSH_TIMEOUT = 30000;
 const MAX_BATCH_SIZE = 20;
@@ -40,7 +27,6 @@ function card(url: string): PreviewSuccess {
   };
 }
 
-/** The shape the endpoint under test was asked for: a map for a batch, one document otherwise. */
 function served(options: any): Promise<unknown> {
   const { urls, url } = options.body;
 
@@ -53,12 +39,6 @@ function deferred<T>() {
   return { promise: new Promise<T>((resolve) => (settle = resolve)), settle };
 }
 
-/**
- * The store keeps its queue and its answers in module scope, so a test that
- * shares them with the one before it is testing the leftovers. Resetting the
- * registry hands each test its own; core's `app` is reset with it, so it is
- * bootstrapped again here rather than once in `beforeAll`.
- */
 async function fresh(attributes: Record<string, unknown> = {}) {
   jest.resetModules();
 
@@ -121,7 +101,6 @@ describe('asking for a preview', () => {
 
     await jest.advanceTimersByTimeAsync(FLUSH_DELAY);
 
-    // The reader has scrolled a second post carrying the same link into view.
     store.loadPreview('https://example.com/a', late);
 
     held.settle({ data: { 'https://example.com/a': card('https://example.com/a') } });
@@ -166,8 +145,6 @@ describe('asking for a preview', () => {
     store.loadPreview('https://example.com/a', () => {});
     await jest.advanceTimersByTimeAsync(FLUSH_DELAY);
 
-    // A post redrawn after the TTL goes on showing its card rather than
-    // blinking back to a skeleton for the length of a round trip.
     expect(store.previewFor('https://example.com/a').status).toBe('ready');
   });
 });
@@ -188,7 +165,6 @@ describe('a failure', () => {
 
     expect(store.previewFor('https://example.com/gone')).toEqual({ status: 'failed', code: 'unreachable' });
 
-    // Hovering an avatar redraws the post, which remounts the card.
     store.loadPreview('https://example.com/gone', () => {});
     await jest.advanceTimersByTimeAsync(FLUSH_DELAY);
 
@@ -203,8 +179,6 @@ describe('a failure', () => {
 
     store.loadPreview('https://example.com/gone', () => {});
 
-    // Cleared rather than left to go stale in place: a card reading the old
-    // failure would take itself down before the new answer arrived.
     expect(store.previewFor('https://example.com/gone').status).toBe('loading');
 
     await jest.advanceTimersByTimeAsync(FLUSH_DELAY);
@@ -231,7 +205,6 @@ describe('a failure', () => {
 
     await jest.advanceTimersByTimeAsync(FLUSH_DELAY);
 
-    // Otherwise two cards spin for the life of the page.
     expect(told).toHaveBeenCalledTimes(2);
     expect(store.previewFor('https://example.com/a').status).toBe('failed');
     expect(store.previewFor('https://example.com/b').status).toBe('failed');
@@ -239,12 +212,6 @@ describe('a failure', () => {
 });
 
 describe('the batch queue', () => {
-  /**
-   * The regression. Everything queued while a flush is in flight is skipped by
-   * the flush its own timer books, and the only thing that starts the queue
-   * again is the release at the end of the request in flight. A timer handle
-   * left set by that skipped flush makes the release a no-op.
-   */
   it('does not strand itself when one flush lands on top of another', async () => {
     const held = deferred<unknown>();
 
@@ -253,7 +220,6 @@ describe('the batch queue', () => {
     store.loadPreview('https://example.com/a', () => {});
     await jest.advanceTimersByTimeAsync(FLUSH_DELAY);
 
-    // A second post scrolls in. Its flush fires while the first is still out.
     store.loadPreview('https://example.com/b', () => {});
     await jest.advanceTimersByTimeAsync(FLUSH_DELAY);
 
@@ -269,8 +235,6 @@ describe('the batch queue', () => {
   });
 
   it('moves on when a request never settles at all', async () => {
-    // Core holds a request that failed while offline until connectivity comes
-    // back, which may be never.
     answer = () => new Promise(() => {});
 
     store.loadPreview('https://example.com/a', () => {});
@@ -295,8 +259,6 @@ describe('the batch queue', () => {
 
     expect(urlsSent()).toEqual([urls.slice(0, MAX_BATCH_SIZE), urls.slice(MAX_BATCH_SIZE)]);
 
-    // The overflow carries the callbacks of the cards waiting on it, so
-    // draining the queue and putting the remainder back loses them.
     expect(told).toHaveBeenCalledTimes(urls.length);
   });
 });
@@ -307,7 +269,6 @@ describe('forgetting old answers', () => {
       store.loadPreview(`https://filler.test/${index}`, () => {});
     }
 
-    // One flush per batch, plus one to find the queue empty.
     for (let flushes = 0; flushes <= Math.ceil(count / MAX_BATCH_SIZE); flushes++) {
       await jest.advanceTimersByTimeAsync(FLUSH_DELAY);
     }
@@ -320,8 +281,6 @@ describe('forgetting old answers', () => {
     await jest.advanceTimersByTimeAsync(FLUSH_DELAY);
     await fill(MAX_ENTRIES + 50);
 
-    // Cards read the store on every redraw and only ask once, when they are
-    // created, so an entry dropped under one leaves a skeleton it never leaves.
     expect(store.previewFor('https://example.com/held').status).toBe('ready');
     expect(store.previewFor('https://filler.test/0').status).toBe('loading');
   });
@@ -335,7 +294,6 @@ describe('forgetting old answers', () => {
     await jest.advanceTimersByTimeAsync(FLUSH_DELAY);
     await fill(MAX_ENTRIES + 50);
 
-    // Two cards showed the link and one of them has been redrawn away.
     expect(store.previewFor('https://example.com/held').status).toBe('ready');
 
     store.releasePreview('https://example.com/held');
@@ -370,10 +328,6 @@ describe('the endpoint', () => {
     expect(store.previewFor('https://example.com/b').status).toBe('ready');
   });
 
-  /**
-   * A cross origin `GET` fires from nothing but an `<img src>`, turning any
-   * visitor of any page into an outbound fetch from this forum.
-   */
   it('is never reached with a GET', async () => {
     await fresh({ 'datlechin-link-preview.batchRequests': false });
 

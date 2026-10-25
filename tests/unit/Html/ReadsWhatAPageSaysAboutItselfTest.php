@@ -16,13 +16,6 @@ use Datlechin\LinkPreview\Html\MetadataExtractor;
 use Flarum\Testing\unit\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * Which of a page's competing descriptions of itself is believed.
- *
- * A real page says the same thing three or four times over, in Open Graph, in
- * Twitter cards, in a bare meta tag and in JSON-LD, and the copies disagree.
- * The order is fixed so two readers who load the same link get the same card.
- */
 class ReadsWhatAPageSaysAboutItselfTest extends TestCase
 {
     private function extract(string $head, string $baseUrl = 'https://example.com/blog/post'): Metadata
@@ -80,8 +73,6 @@ class ReadsWhatAPageSaysAboutItselfTest extends TestCase
     #[Test]
     public function a_tag_with_no_content_does_not_win(): void
     {
-        // A CMS that emits the tag whether or not it has anything to put in it
-        // would otherwise blank the card for the sake of an empty string.
         $metadata = $this->extract(<<<'HTML'
             <meta property="og:title" content="   ">
             <meta property="og:description" content="">
@@ -158,8 +149,6 @@ class ReadsWhatAPageSaysAboutItselfTest extends TestCase
             </script>
             HTML);
 
-        // `headline` is tried across every node before `name` is tried
-        // anywhere, so the article wins over the site node it was listed after.
         $this->assertSame('Article node headline', $metadata->title);
         $this->assertSame('https://cdn.example.com/graph.png', $metadata->imageUrl);
     }

@@ -14,13 +14,6 @@ namespace Datlechin\LinkPreview\Tests\integration;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * The upgrade path for a forum that has been running the old version.
- *
- * Four settings changed name and two were withdrawn. Getting this wrong is
- * quiet: a blocklist that silently empties itself does not fail, it just starts
- * previewing the sites an administrator asked it not to.
- */
 class RenamesSettingsTest extends TestCase
 {
     private const PREFIX = 'datlechin-link-preview.';
@@ -57,8 +50,6 @@ class RenamesSettingsTest extends TestCase
     #[Test]
     public function a_value_the_administrator_has_since_chosen_is_left_alone(): void
     {
-        // The second run of a migration, or an upgrade where the new settings
-        // page was opened first. The stale value must not win.
         $this->store(['blacklist' => 'stale.test', 'blocklist' => 'chosen.test']);
 
         $this->migrate('up');
@@ -80,8 +71,6 @@ class RenamesSettingsTest extends TestCase
         $this->assertNull($this->value('external_api_fallback'));
         $this->assertNull($this->value('external_api_url'));
 
-        // The address was configured once and forgotten, and there is nowhere
-        // honest to carry it to, so it must not survive under another name.
         $this->assertSame(0, $this->database()->table('settings')->where('value', 'like', '%unfurl.example%')->count());
     }
 
@@ -132,15 +121,11 @@ class RenamesSettingsTest extends TestCase
 
     private function migrate(string $direction): void
     {
-        /** @var array<string, callable> $migration */
         $migration = require __DIR__.'/../../migrations/2026_09_06_000000_rename_settings.php';
 
         $migration[$direction]($this->database()->getSchemaBuilder());
     }
 
-    /**
-     * @param  array<string, string>  $values
-     */
     private function store(array $values): void
     {
         foreach ($values as $key => $value) {

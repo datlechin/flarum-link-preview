@@ -15,14 +15,6 @@ use Datlechin\LinkPreview\Html\MetadataExtractor;
 use Flarum\Testing\unit\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * A page is decoded before it is read, not after.
- *
- * Mojibake is worse than a missing preview: it gets cached and then shown as
- * if it were the site's own words. The two places a page declares its encoding
- * are the response header and its own head, and plenty of pages that are not
- * UTF-8 use one or the other.
- */
 class DecodesADeclaredCharsetTest extends TestCase
 {
     private const JAPANESE = '日本語のページ';
@@ -89,9 +81,6 @@ class DecodesADeclaredCharsetTest extends TestCase
     #[Test]
     public function the_header_is_believed_over_the_page(): void
     {
-        // Servers are reconfigured more often than templates are, so the
-        // header describes the bytes that actually arrived and a stale meta
-        // tag does not.
         $html = $this->encoded(
             '<html><head><meta charset="UTF-8"><title>'.self::GERMAN.'</title></head></html>',
             'ISO-8859-1',

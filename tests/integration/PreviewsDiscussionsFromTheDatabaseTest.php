@@ -18,14 +18,6 @@ use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * Links back to this forum, answered without leaving it.
- *
- * A forum fetching its own pages waits on a request the same server has to
- * serve, which on a single worker never finishes, and the fetch would carry no
- * session, so a guest would be handed a preview of a discussion the guest is
- * not allowed to read. Both of those are covered here.
- */
 class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
 {
     use PreviewsLinks;
@@ -106,14 +98,12 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
     #[Test]
     public function what_the_card_lists_arrives_as_meta(): void
     {
-        // One list for every internal type, so the browser renders all of them
-        // through one component rather than one per kind of page.
         $meta = $this->meta($this->data($this->preview('http://localhost/d/1')));
 
         $this->assertCount(3, $meta, 'no tags here: the tags extension is not enabled');
-        $this->assertSame(['key' => 'author', 'text' => 'normal'], $meta[0]);
-        $this->assertSame(['key' => 'replies', 'count' => 3], $meta[1], 'four comments is three replies');
-        $this->assertSame('created', $meta[2]['key']);
+        $this->assertSame(['type' => 'user', 'text' => 'normal'], $meta[0]);
+        $this->assertSame(['type' => 'count', 'key' => 'datlechin-link-preview.forum.meta.replies', 'count' => 3], $meta[1], 'four comments is three replies');
+        $this->assertSame('date', $meta[2]['type']);
         $this->assertSameInstant('2026-01-01 00:00:00', $meta[2]['date']);
     }
 
@@ -137,8 +127,6 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
     #[Test]
     public function a_discussion_the_reader_cannot_see_has_no_metadata(): void
     {
-        // Asked for without the slug, so a title leaking into the answer would
-        // be the server's doing rather than something the request already said.
         $response = $this->preview('http://localhost/d/2');
 
         $this->assertSame(200, $response->getStatusCode());
@@ -157,8 +145,6 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
     #[Test]
     public function nothing_leaves_the_server_for_a_link_to_this_forum(): void
     {
-        // No host in the fake network resolves and no page answers it, so a
-        // fetch would have come back unsafe_address instead of a discussion.
         $data = $this->data($this->preview('http://localhost/d/1'));
 
         $this->assertSame('discussion', $data['type']);
@@ -166,21 +152,16 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
     }
 
     #[Test]
-    public function a_discussion_address_carrying_something_that_is_not_an_id_has_no_metadata(): void
+    public function a_discussion_address_carrying_something_that_is_not_an_id_is_not_previewable(): void
     {
-        // Never fetched either: the forum answers for its own addresses or it
-        // answers with nothing.
-        $this->assertSame('no_metadata', $this->data($this->preview('http://localhost/d/twelve'))['error']);
-        $this->assertSame('no_metadata', $this->data($this->preview('http://localhost/d/'))['error']);
+        $this->assertSame('not_previewable', $this->data($this->preview('http://localhost/d/twelve'))['error']);
+        $this->assertSame('not_previewable', $this->data($this->preview('http://localhost/d/'))['error']);
         $this->assertSame([], $this->web->requested);
     }
 
     #[Test]
     public function an_internal_address_is_refused_outright_when_the_setting_is_off(): void
     {
-        // The answer for a page still running an older bundle, which asks
-        // instead of skipping. Still a refusal rather than a fetch: a forum
-        // reading its own pages is the one request that can wait on itself.
         $this->setting('datlechin-link-preview.preview_internal_links', 0);
 
         $response = $this->preview('http://localhost/d/1-ways-to-season-a-cast-iron-pan');

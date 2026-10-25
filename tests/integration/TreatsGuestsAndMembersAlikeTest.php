@@ -15,14 +15,6 @@ use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * The endpoint is deliberately open.
- *
- * A preview says no more about a page than the page tells any visitor, and a
- * guest who can read the post can already read the address in it. What keeps
- * it from being an open proxy is the address checks, the throttler and the
- * cache, none of which care who is asking.
- */
 class TreatsGuestsAndMembersAlikeTest extends TestCase
 {
     use PreviewsLinks;
@@ -43,8 +35,6 @@ class TreatsGuestsAndMembersAlikeTest extends TestCase
     #[Test]
     public function a_guest_gets_exactly_what_a_member_gets(): void
     {
-        // Caching off, or the second answer would only prove the first one was
-        // stored rather than that both readers were served the same way.
         $this->setting('datlechin-link-preview.cache_time', 0);
 
         $this->web->host('example.test', '93.184.216.34')

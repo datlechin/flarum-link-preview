@@ -16,17 +16,6 @@ use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 
-/**
- * The line between a request that is wrong and an address that cannot be
- * previewed.
- *
- * A caller that sends no URL has made a mistake and gets a 400. An address
- * that turns out to be unreachable, blocked or empty has not: that is an
- * ordinary answer with an error code in it, cacheable and renderable, and the
- * frontend depends on the two never being confused. Both endpoints take a JSON
- * body over POST and neither answers a GET, so neither can be triggered from
- * somebody else's page.
- */
 class RefusesMalformedRequestsTest extends TestCase
 {
     use PreviewsLinks;
@@ -73,8 +62,6 @@ class RefusesMalformedRequestsTest extends TestCase
     #[Test]
     public function the_endpoint_cannot_be_reached_with_a_get(): void
     {
-        // An `<img src>` pointing here would make any visitor's browser ask
-        // this forum to open a connection, with no preflight in the way.
         $response = $this->send(
             $this->request('GET', '/api/datlechin-link-preview')
                 ->withQueryParams(['url' => 'https://example.test/'])
@@ -134,13 +121,6 @@ class RefusesMalformedRequestsTest extends TestCase
         $this->assertSame('invalid_url', $this->data($response)['error']);
     }
 
-    /**
-     * The single endpoint asked with a body of the test's own choosing, since
-     * every case here is about a body {@see PreviewsLinks::preview()} would
-     * never build.
-     *
-     * @param  array<string, mixed>  $options
-     */
     private function post(array $options = []): ResponseInterface
     {
         return $this->send(

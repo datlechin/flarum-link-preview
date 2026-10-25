@@ -1,10 +1,5 @@
 import app from 'flarum/forum/app';
 
-/**
- * Mirrors `Datlechin\LinkPreview\Preview\UrlFilter` and has to stay that way. The server
- * still wins where the two disagree, so a mismatch costs a request rather than a preview.
- */
-
 const patterns = new Map<string, RegExp | null>();
 
 export function parseList(value: string): string[] {
@@ -37,11 +32,6 @@ export function allowsUrl(url: string): boolean {
   return !matchesList(url, blocklist);
 }
 
-/**
- * What both sides of a comparison are reduced to: host, path and query, with no scheme,
- * no leading `www.`, no trailing slash and no trailing dot on the root label. The
- * fragment goes too, so `#section` cannot decide whether a link is blocked.
- */
 function subjectOf(url: string): string | null {
   let parsed: URL;
 
@@ -59,10 +49,6 @@ function subjectOf(url: string): string | null {
   return host + parsed.pathname.replace(/\/$/, '') + parsed.search;
 }
 
-/**
- * Parsed rather than trimmed: `example.com:8443`, `someone@example.com` and `example.com.`
- * all name the host an administrator meant, and `parse_url` reads them that way server side.
- */
 function normalise(entry: string): string {
   const value = entry.trim();
   const authority = /^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value.replace(/^\/+/, '')}`;
@@ -102,14 +88,10 @@ function compile(entry: string): RegExp | null {
   const host = slash === -1 ? normalised : normalised.slice(0, slash);
   const path = slash === -1 ? null : normalised.slice(slash);
 
-  // Inside the host `*` stops at a dot, so `*.example.com` cannot reach past one
-  // label and match `example.com.attacker.net`. In a path it runs freely.
   const hostSource = escape(host).replace(/\\\*/g, '[^.]*');
 
-  // A host entry covers subdomains; a path entry does not, it already names the address it means.
   const source = path === null ? `^(?:[^/?]+\\.)?${hostSource}(?:[/?].*)?$` : `^${hostSource}${escape(path).replace(/\\\*/g, '.*')}(?:[/?].*)?$`;
 
-  // Case insensitive for the path; the host is already lowercased on both sides.
   return new RegExp(source, 'i');
 }
 

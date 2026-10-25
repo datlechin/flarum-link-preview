@@ -15,14 +15,6 @@ use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * A link to somebody's profile, answered from the database.
- *
- * The card is the member as this reader could already see them: their name,
- * their avatar and two counts core keeps on the row. A reader who may not see
- * the member at all gets nothing, which is why the row is read through
- * `User::whereVisibleTo` rather than by id.
- */
 class PreviewsProfilesFromTheDatabaseTest extends TestCase
 {
     use PreviewsLinks;
@@ -54,8 +46,6 @@ class PreviewsProfilesFromTheDatabaseTest extends TestCase
                     'comment_count' => 1,
                 ],
             ],
-            // Group 3 is Members, so revoking `viewForum` leaves this one able
-            // to see themselves and nobody else.
             'group_user' => [['user_id' => 2, 'group_id' => 3]],
         ]);
     }
@@ -80,8 +70,8 @@ class PreviewsProfilesFromTheDatabaseTest extends TestCase
         $meta = $this->meta($this->data($this->preview('http://localhost/u/normal')));
 
         $this->assertCount(2, $meta);
-        $this->assertSame(['key' => 'posts', 'count' => 7], $meta[0]);
-        $this->assertSame('joined', $meta[1]['key']);
+        $this->assertSame(['type' => 'count', 'key' => 'datlechin-link-preview.forum.meta.posts', 'count' => 7], $meta[0]);
+        $this->assertSame('date', $meta[1]['type']);
         $this->assertSameInstant('2025-03-04 05:06:07', $meta[1]['date']);
     }
 
@@ -102,18 +92,12 @@ class PreviewsProfilesFromTheDatabaseTest extends TestCase
     #[Test]
     public function a_member_the_reader_cannot_see_is_a_failure_rather_than_a_card(): void
     {
-        // The real scoping, not a stand-in for it: with `viewForum` gone a
-        // member sees only their own row, which is what `whereVisibleTo` puts
-        // on the query.
         $this->revokePermission('viewForum');
 
         $data = $this->data($this->preview('http://localhost/u/photogenic', ['authenticatedAs' => 2]));
 
         $this->assertSame('no_metadata', $data['error']);
 
-        // The name is in the address the reader already sent, so what proves
-        // nothing leaked is the shape: a failure carries an address and a code
-        // and no part of the card it did not build.
         $this->assertArrayNotHasKey('title', $data);
         $this->assertArrayNotHasKey('description', $data);
         $this->assertArrayNotHasKey('image', $data);

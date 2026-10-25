@@ -15,14 +15,6 @@ use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * The forum's own front page, and the addresses on it that get no card.
- *
- * The tags extension is deliberately off here: `/t/{slug}` is an ordinary
- * address on a forum without it, and the table, the relation and the model it
- * would be read through are all missing, so the answer has to be a failure
- * rather than a fatal.
- */
 class PreviewsTheForumItselfTest extends TestCase
 {
     use PreviewsLinks;
@@ -50,7 +42,7 @@ class PreviewsTheForumItselfTest extends TestCase
         $data = $this->data($response);
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame('forum', $data['type']);
+        $this->assertSame('default', $data['type']);
         $this->assertSame('The Cast Iron Club', $data['title']);
         $this->assertSame('Cookware, and the people who scrub it', $data['description']);
         $this->assertSame('http://localhost/assets/favicon-abc.png', $data['favicon']);
@@ -60,13 +52,11 @@ class PreviewsTheForumItselfTest extends TestCase
     }
 
     #[Test]
-    public function the_index_card_names_the_host_rather_than_the_forum(): void
+    public function the_index_card_names_the_forum_like_every_other_internal_card(): void
     {
-        // The title is already on the card. Repeating it underneath says
-        // nothing, where the address the reader is being sent to does.
         $data = $this->data($this->preview('http://localhost/'));
 
-        $this->assertSame('localhost', $data['siteName']);
+        $this->assertSame('The Cast Iron Club', $data['siteName']);
     }
 
     #[Test]
@@ -74,40 +64,38 @@ class PreviewsTheForumItselfTest extends TestCase
     {
         $data = $this->data($this->preview('http://localhost'));
 
-        $this->assertSame('forum', $data['type']);
+        $this->assertSame('default', $data['type']);
         $this->assertSame('The Cast Iron Club', $data['title']);
         $this->assertSame([], $this->web->requested);
     }
 
     #[Test]
-    public function a_tag_link_on_a_forum_without_the_tags_extension_is_a_failure(): void
+    public function a_tag_link_on_a_forum_without_the_tags_extension_is_not_previewable(): void
     {
         $response = $this->preview('http://localhost/t/cooking');
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame('no_metadata', $this->data($response)['error']);
+        $this->assertSame('not_previewable', $this->data($response)['error']);
         $this->assertSame([], $this->web->requested);
     }
 
     #[Test]
     public function a_batch_carrying_that_tag_link_answers_the_rest_of_it(): void
     {
-        // A fatal here would take the whole page's previews with it, not just
-        // the one link, which is what makes the batch worth asserting on.
         $data = $this->data($this->previewBatch([
             'http://localhost/t/cooking',
             'http://localhost/',
         ]));
 
-        $this->assertSame('no_metadata', $data['http://localhost/t/cooking']['error']);
-        $this->assertSame('forum', $data['http://localhost/']['type']);
+        $this->assertSame('not_previewable', $data['http://localhost/t/cooking']['error']);
+        $this->assertSame('default', $data['http://localhost/']['type']);
     }
 
     #[Test]
-    public function an_internal_address_matching_none_of_the_routes_is_a_failure_and_is_never_fetched(): void
+    public function a_page_no_card_is_registered_for_is_not_previewable_and_is_never_fetched(): void
     {
         foreach (['http://localhost/settings', 'http://localhost/all', 'http://localhost/notifications'] as $url) {
-            $this->assertSame('no_metadata', $this->data($this->preview($url))['error'], $url);
+            $this->assertSame('not_previewable', $this->data($this->preview($url))['error'], $url);
         }
 
         $this->assertSame([], $this->web->requested);

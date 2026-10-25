@@ -26,9 +26,10 @@ datlechin-link-preview:
 
       preview_internal_links_label: Preview links to this forum
       preview_internal_links_help: >
-        A link here to a discussion, member, tag or the index becomes a card
-        read from the database, so nothing is fetched and nobody sees more than
-        they could already open.
+        A link to a page here, such as a discussion, member, tag, the index, or
+        a page another extension describes, becomes a card read from the
+        database. Nothing is fetched, and nobody sees more than they could
+        already open.
 
       skip_media_links_label: Skip links to media files
       skip_media_links_help: For links ending in an image, audio or video file, which Flarum already renders.
@@ -56,15 +57,11 @@ datlechin-link-preview:
 
     loading: Loading preview
 
-    # The facts a card built from the database lists under its title. Only the
-    # counted ones need a string: the rest carry their own text or a date.
     meta:
       replies: "{count, plural, one {# reply} other {# replies}}"
       posts: "{count, plural, one {# post} other {# posts}}"
       discussions: "{count, plural, one {# discussion} other {# discussions}}"
 
-    # Shown only when something on the forum is counting clicks. Both the number
-    # and the decision that it is worth showing come from that extension.
     clicks: "{count, plural, one {# click} other {# clicks}}"
 
     settings:

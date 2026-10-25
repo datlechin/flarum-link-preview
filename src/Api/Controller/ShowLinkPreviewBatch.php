@@ -46,15 +46,9 @@ final class ShowLinkPreviewBatch implements RequestHandlerInterface
             $previews,
         );
 
-        // Cast: an empty map encodes as `[]`, and the client looks every
-        // preview up by the URL it asked for.
         return new JsonResponse(['data' => (object) $data]);
     }
 
-    /**
-     * @param  array<mixed>  $urls
-     * @return list<string>
-     */
     private function requested(array $urls): array
     {
         $requested = [];

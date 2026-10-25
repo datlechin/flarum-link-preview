@@ -36,32 +36,22 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
   }
 
   saveSettings(e: SaveSubmitEvent) {
-    // Submitting does not always take focus off a field first.
     Object.keys(NUMBER_BOUNDS).forEach((name) => this.clampNumber(name));
 
     return super.saveSettings(e);
   }
 
-  // Nothing enforces `min` on a number input and an emptied one saves as an
-  // empty row, while the server clamps both back into range on every read.
   protected clampNumber(name: string): void {
     const { min, fallback } = NUMBER_BOUNDS[name];
     const setting = this.setting(settingKey(name));
-    // A setting nobody has saved yet arrives as the number the extender
-    // declared, not as a string.
     const raw = String(setting() ?? '').trim();
     const clamped = raw === '' || !Number.isFinite(Number(raw)) ? fallback : Math.max(min, Math.trunc(Number(raw)));
 
-    // Only on a real change, so tabbing through an untouched field does not
-    // light up the submit button.
     if (String(clamped) !== raw) {
       setting(String(clamped));
     }
   }
 
-  // `buildSettingComponent` records nothing about what it built, so the label is
-  // registered alongside the stream; otherwise the reset modal lists these
-  // settings by their storage keys.
   protected field(name: string, options: FieldOptions): Mithril.Children {
     const key = settingKey(name);
     const label = trans(`settings.${name}_label`);
@@ -78,9 +68,6 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
     });
   }
 
-  // `FieldSet--form` on every section: without it core spaces fieldset items 5px
-  // apart and label to help text 10px, so each help text sits closer to the next
-  // field than to the one it describes.
   settingSections(): ItemList<Mithril.Children> {
     const items = new ItemList<Mithril.Children>();
 
@@ -125,8 +112,6 @@ export default class LinkPreviewSettingsPage extends ExtensionPage {
       70
     );
 
-    // Core's `content()` renders whatever another extension registered against
-    // this one, and replacing that method would silently drop them.
     const registered = app.registry.getSettings(this.extension.id) ?? [];
 
     if (registered.length) {

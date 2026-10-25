@@ -19,11 +19,6 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * No permission check: a preview says no more than the page already tells any
- * visitor. What keeps the endpoint from being an open proxy is SafeFetcher's
- * address checks, the throttler and the cache.
- */
 final class ShowLinkPreview implements RequestHandlerInterface
 {
     public function __construct(private Previewer $previewer)

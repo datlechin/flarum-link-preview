@@ -19,10 +19,6 @@ use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
-/**
- * A forum installed at localhost/forum. URLs under /forum are the forum's own,
- * the rest of the host is fetched like any other site.
- */
 class PreviewsAForumInASubdirectoryTest extends TestCase
 {
     use PreviewsLinks;
@@ -82,7 +78,7 @@ class PreviewsAForumInASubdirectoryTest extends TestCase
     public function the_base_path_itself_is_the_forum(): void
     {
         foreach (['http://localhost/forum', 'http://localhost/forum/'] as $url) {
-            $this->assertSame('forum', $this->data($this->preview($url))['type'], $url);
+            $this->assertSame('default', $this->data($this->preview($url))['type'], $url);
         }
 
         $this->assertSame([], $this->web->requested);
@@ -91,7 +87,7 @@ class PreviewsAForumInASubdirectoryTest extends TestCase
     #[Test]
     public function a_forum_page_without_a_card_is_not_fetched(): void
     {
-        $this->assertSame('no_metadata', $this->data($this->preview('http://localhost/forum/settings'))['error']);
+        $this->assertSame('not_previewable', $this->data($this->preview('http://localhost/forum/settings'))['error']);
         $this->assertSame([], $this->web->requested);
     }
 
@@ -109,9 +105,6 @@ class PreviewsAForumInASubdirectoryTest extends TestCase
         $this->assertSame([$url], $this->web->requested);
     }
 
-    /**
-     * @return array<string, array{string}>
-     */
     public static function neighbours(): array
     {
         return [
