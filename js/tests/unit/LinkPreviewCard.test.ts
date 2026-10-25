@@ -21,6 +21,7 @@ beforeAll(() => {
     'datlechin-link-preview.forum.loading': 'Loading preview',
     'datlechin-link-preview.forum.clicks': '{count, plural, one {# click} other {# clicks}}',
     'datlechin-link-preview.forum.meta.replies': '{count, plural, one {# reply} other {# replies}}',
+    'acme-recipes.forum.link_preview.steps': '{count, plural, one {# step} other {# steps}}',
   });
 
   app.request = ((options: any) => {
@@ -118,10 +119,10 @@ describe('the row of facts under a card', () => {
       description: 'An early return left a fired timer in place.',
       siteName: 'Flarum Community',
       meta: [
-        { key: 'tags', text: 'Support' },
-        { key: 'author', text: 'Alice' },
-        { key: 'replies', count: 12 },
-        { key: 'created', date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
+        { type: 'text', text: 'Support' },
+        { type: 'user', text: 'Alice' },
+        { type: 'count', key: 'datlechin-link-preview.forum.meta.replies', count: 12 },
+        { type: 'date', date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
       ],
     });
 
@@ -151,8 +152,8 @@ describe('the row of facts under a card', () => {
 
     await seed(url, {
       meta: [
-        { key: 'author', text: 'Alice' },
-        { key: 'tags', text: 'Support' },
+        { type: 'user', text: 'Alice' },
+        { type: 'text', text: 'Support' },
       ],
     });
 
@@ -165,16 +166,24 @@ describe('the row of facts under a card', () => {
   it('counts a count item through the translator', async () => {
     const url = unasked();
 
-    await seed(url, { meta: [{ key: 'replies', count: 1 }] });
+    await seed(url, { meta: [{ type: 'count', key: 'datlechin-link-preview.forum.meta.replies', count: 1 }] });
 
     expect(render(url).rootEl.textContent).toContain('1 reply');
+  });
+
+  it('counts with the string of whichever extension built the card', async () => {
+    const url = unasked();
+
+    await seed(url, { meta: [{ type: 'count', key: 'acme-recipes.forum.link_preview.steps', count: 4 }] });
+
+    expect(render(url).rootEl.textContent).toContain('4 steps');
   });
 
   it('prints a date item as a human time', async () => {
     const url = unasked();
     const date = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
 
-    await seed(url, { meta: [{ key: 'created', date }] });
+    await seed(url, { meta: [{ type: 'date', date }] });
 
     const time = render(url).first('.LinkPreview-info time[data-humantime]');
 
@@ -200,7 +209,7 @@ describe('the anchor a card is made of', () => {
       title: 'One anchor',
       description: 'And everything inside it.',
       image: { url: 'https://example.com/hero.png', width: 1200, height: 630 },
-      meta: [{ key: 'author', text: 'Alice' }],
+      meta: [{ type: 'user', text: 'Alice' }],
     });
 
     const rendered = render(url);
@@ -335,7 +344,7 @@ describe('remote text a card is built from', () => {
       title: 'Invoice \u202Emoc.elpmaxe\u202C',
       description: 'Pay \u2066here\u2069',
       siteName: '\u202Eevil\u202C',
-      meta: [{ key: 'author', text: 'Al\u202Dice' }],
+      meta: [{ type: 'user', text: 'Al\u202Dice' }],
     });
 
     const rendered = render(url);

@@ -30,21 +30,21 @@ const EMBEDDED = 'img, picture, video, audio, iframe, embed, object, svg';
 
 const BLOCKS = new Set(['P', 'DIV', 'LI', 'DD', 'DT', 'TD', 'TH', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'FIGCAPTION', 'SECTION', 'ARTICLE']);
 
-export default function collectPreviewTargets(postBody: HTMLElement): PreviewTarget[] {
+export default function collectPreviewTargets(body: HTMLElement): PreviewTarget[] {
   const max = Math.max(1, app.forum.attribute<number | undefined>('datlechin-link-preview.maxPreviewsPerPost') ?? 5);
   const skipMedia = app.forum.attribute<boolean | undefined>('datlechin-link-preview.skipMediaLinks') ?? false;
   const internalAllowed = app.forum.attribute<boolean | undefined>('datlechin-link-preview.previewInternalLinks') ?? true;
 
-  const budget = max - postBody.querySelectorAll(CARD).length;
+  const budget = max - body.querySelectorAll(CARD).length;
 
   if (budget <= 0) return [];
 
   const targets: PreviewTarget[] = [];
 
-  for (const link of Array.from(postBody.querySelectorAll('a'))) {
+  for (const link of Array.from(body.querySelectorAll('a'))) {
     if (targets.length >= budget) break;
 
-    const target = targetFor(link, postBody, skipMedia, internalAllowed);
+    const target = targetFor(link, body, skipMedia, internalAllowed);
 
     if (target !== null) targets.push(target);
   }
@@ -52,7 +52,7 @@ export default function collectPreviewTargets(postBody: HTMLElement): PreviewTar
   return targets;
 }
 
-function targetFor(link: HTMLAnchorElement, postBody: HTMLElement, skipMedia: boolean, internalAllowed: boolean): PreviewTarget | null {
+function targetFor(link: HTMLAnchorElement, body: HTMLElement, skipMedia: boolean, internalAllowed: boolean): PreviewTarget | null {
   if (link.matches(HANDLED) || link.matches(MENTIONS)) return null;
 
   if (link.closest(EXCLUDED_ANCESTOR) !== null) return null;
@@ -65,9 +65,9 @@ function targetFor(link: HTMLAnchorElement, postBody: HTMLElement, skipMedia: bo
 
   if (!allowsUrl(destination.href)) return null;
 
-  const block = blockOf(link, postBody);
+  const block = blockOf(link, body);
 
-  if (block === postBody) return null;
+  if (block === body) return null;
 
   const alone = ownsItsLine(link, block);
   const internal = isInternal(destination);
@@ -75,8 +75,6 @@ function targetFor(link: HTMLAnchorElement, postBody: HTMLElement, skipMedia: bo
 
   if (internal) {
     if (!internalAllowed) return null;
-
-    if (!isPreviewableRoute(destination)) return null;
 
     if (link.matches(DISCUSSION)) {
       return alone ? { link, url, internal, block, mode: 'replace' } : null;
@@ -140,18 +138,6 @@ function isInternal(url: URL): boolean {
   return true;
 }
 
-function isPreviewableRoute(url: URL): boolean {
-  const base = basePath();
-
-  const path = trimSlash(base === '' ? url.pathname : url.pathname.slice(base.length));
-
-  if (path === '') return true;
-
-  if (/^\/d\/\d+(?:-[^/]*)?(?:\/\d+)?$/.test(path)) return true;
-
-  return /^\/u\/[^/]+$/.test(path) || /^\/t\/[^/]+$/.test(path);
-}
-
 function basePath(): string {
   return app.forum.attribute<string | undefined>('basePath') || '';
 }
@@ -168,16 +154,16 @@ function trimSlash(value: string): string {
   return value.replace(/\/$/, '');
 }
 
-function blockOf(link: HTMLAnchorElement, postBody: HTMLElement): HTMLElement {
+function blockOf(link: HTMLAnchorElement, body: HTMLElement): HTMLElement {
   let node = link.parentElement;
 
-  while (node !== null && node !== postBody) {
+  while (node !== null && node !== body) {
     if (BLOCKS.has(node.tagName)) return node;
 
     node = node.parentElement;
   }
 
-  return postBody;
+  return body;
 }
 
 function ownsItsLine(link: HTMLAnchorElement, block: HTMLElement): boolean {

@@ -126,15 +126,14 @@ export default class LinkPreviewCard extends Component<LinkPreviewCardAttrs> {
   }
 
   protected viewMeta(item: MetaItem): Mithril.Children {
-    if ('text' in item) {
-      return <span className={item.key === 'author' ? 'username' : undefined}>{plain(item.text)}</span>;
+    switch (item.type) {
+      case 'count':
+        return <span>{app.translator.trans(item.key, { count: item.count })}</span>;
+      case 'date':
+        return humanTime(new Date(item.date));
+      default:
+        return <span className={item.type === 'user' ? 'username' : undefined}>{plain(item.text)}</span>;
     }
-
-    if ('count' in item) {
-      return <span>{app.translator.trans(`datlechin-link-preview.forum.meta.${item.key}`, { count: item.count })}</span>;
-    }
-
-    return humanTime(new Date(item.date));
   }
 
   protected viewFavicon(data: PreviewSuccess, host: string): Mithril.Children {

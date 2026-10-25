@@ -42,7 +42,7 @@ class PreviewsTheForumItselfTest extends TestCase
         $data = $this->data($response);
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame('forum', $data['type']);
+        $this->assertSame('default', $data['type']);
         $this->assertSame('The Cast Iron Club', $data['title']);
         $this->assertSame('Cookware, and the people who scrub it', $data['description']);
         $this->assertSame('http://localhost/assets/favicon-abc.png', $data['favicon']);
@@ -52,11 +52,11 @@ class PreviewsTheForumItselfTest extends TestCase
     }
 
     #[Test]
-    public function the_index_card_names_the_host_rather_than_the_forum(): void
+    public function the_index_card_names_the_forum_like_every_other_internal_card(): void
     {
         $data = $this->data($this->preview('http://localhost/'));
 
-        $this->assertSame('localhost', $data['siteName']);
+        $this->assertSame('The Cast Iron Club', $data['siteName']);
     }
 
     #[Test]
@@ -64,18 +64,18 @@ class PreviewsTheForumItselfTest extends TestCase
     {
         $data = $this->data($this->preview('http://localhost'));
 
-        $this->assertSame('forum', $data['type']);
+        $this->assertSame('default', $data['type']);
         $this->assertSame('The Cast Iron Club', $data['title']);
         $this->assertSame([], $this->web->requested);
     }
 
     #[Test]
-    public function a_tag_link_on_a_forum_without_the_tags_extension_is_a_failure(): void
+    public function a_tag_link_on_a_forum_without_the_tags_extension_is_not_previewable(): void
     {
         $response = $this->preview('http://localhost/t/cooking');
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame('no_metadata', $this->data($response)['error']);
+        $this->assertSame('not_previewable', $this->data($response)['error']);
         $this->assertSame([], $this->web->requested);
     }
 
@@ -87,15 +87,15 @@ class PreviewsTheForumItselfTest extends TestCase
             'http://localhost/',
         ]));
 
-        $this->assertSame('no_metadata', $data['http://localhost/t/cooking']['error']);
-        $this->assertSame('forum', $data['http://localhost/']['type']);
+        $this->assertSame('not_previewable', $data['http://localhost/t/cooking']['error']);
+        $this->assertSame('default', $data['http://localhost/']['type']);
     }
 
     #[Test]
-    public function an_internal_address_matching_none_of_the_routes_is_a_failure_and_is_never_fetched(): void
+    public function a_page_no_card_is_registered_for_is_not_previewable_and_is_never_fetched(): void
     {
         foreach (['http://localhost/settings', 'http://localhost/all', 'http://localhost/notifications'] as $url) {
-            $this->assertSame('no_metadata', $this->data($this->preview($url))['error'], $url);
+            $this->assertSame('not_previewable', $this->data($this->preview($url))['error'], $url);
         }
 
         $this->assertSame([], $this->web->requested);

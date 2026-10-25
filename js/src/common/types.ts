@@ -1,5 +1,4 @@
 export type PreviewLayout = 'large' | 'compact';
-export type PreviewType = 'link' | 'discussion' | 'user' | 'tag' | 'forum';
 
 export interface PreviewImage {
   url: string;
@@ -7,11 +6,11 @@ export interface PreviewImage {
   height: number | null;
 }
 
-export type MetaItem = { key: string; text: string } | { key: string; count: number } | { key: string; date: string };
+export type MetaItem = { type: 'text' | 'user'; text: string } | { type: 'count'; key: string; count: number } | { type: 'date'; date: string };
 
 export interface PreviewSuccess {
   url: string;
-  type: PreviewType;
+  type: string;
   layout: PreviewLayout;
   title: string | null;
   description: string | null;

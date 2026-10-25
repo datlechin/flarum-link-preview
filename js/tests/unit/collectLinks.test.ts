@@ -1,7 +1,4 @@
 /**
- * Runs at the address the markup below points back at, because `collectLinks`
- * decides what is internal against `window.location`.
- *
  * @jest-environment-options {"url": "https://f.test/"}
  */
 
@@ -176,9 +173,11 @@ describe("the forum's own pages", () => {
     expect(targets.every((target) => target.internal)).toBe(true);
   });
 
-  it('leaves any other page of this forum alone rather than asking the server about it', () => {
-    expect(collect(`<p>${internal('/settings')}</p>`)).toEqual([]);
-    expect(collect(`<p>${internal('/tags')}</p>`)).toEqual([]);
+  it('asks about any other page of this forum too, since only the server knows which have a card', () => {
+    expect(urls(collect(`<p>${internal('/settings')}</p><p>${internal('/wiki/getting-started')}</p>`))).toEqual([
+      'https://f.test/settings',
+      'https://f.test/wiki/getting-started',
+    ]);
   });
 
   it('collects a discussion label that is all its paragraph says', () => {

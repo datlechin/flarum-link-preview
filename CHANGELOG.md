@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Other extensions can give their own pages a card: `Datlechin\LinkPreview\Extend\LinkPreview::route()` registers a card against a forum route name.
+- Other extensions can have links inside their own content previewed, through the `LinkPreview` frontend extender's `content()`.
+- Private messages get previews, since they render through the same core component as posts.
+
+### Changed
+
+- Internal links are matched by Flarum's router instead of patterns of our own, and the server alone decides which pages have a card. A page with no card now answers `not_previewable` instead of `no_metadata`.
+- Meta items carry a `type`, and a count names its full translation key.
+- The built-in cards for discussions, members, tags and the index are registered through the same extender.
+
 ## 2.0.2
 
 ### Fixed

@@ -11,6 +11,8 @@
 
 namespace Datlechin\LinkPreview;
 
+use Datlechin\LinkPreview\Extend\LinkPreview;
+use Datlechin\LinkPreview\Internal\Cards;
 use Flarum\Extend;
 
 $settings = new Extend\Settings();
@@ -55,6 +57,16 @@ return [
 
     (new Extend\ThrottleApi())
         ->set('datlechinLinkPreview', Api\LinkPreviewThrottler::class),
+
+    (new LinkPreview())
+        ->route('default', Cards\ForumCard::class)
+        ->route('discussion', Cards\DiscussionCard::class)
+        ->route('user', Cards\UserCard::class),
+
+    (new Extend\Conditional())
+        ->whenExtensionEnabled('flarum-tags', fn () => [
+            (new LinkPreview())->route('tag', Cards\TagCard::class),
+        ]),
 
     $settings,
 ];

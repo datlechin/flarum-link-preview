@@ -81,7 +81,7 @@ class PreviewsWhereTheLinkReallyGoesTest extends TestCase
         $this->web->host('good.test', self::PUBLIC_ADDRESS)
             ->page('https://good.test/article', self::article());
 
-        $this->assertSame('no_metadata', $this->data($this->preview('http://localhost/lcc/track?u=9f2c1b'))['error']);
+        $this->assertSame('not_previewable', $this->data($this->preview('http://localhost/lcc/track?u=9f2c1b'))['error']);
         $this->assertSame([], $this->web->requested);
     }
 
@@ -110,7 +110,7 @@ class PreviewsWhereTheLinkReallyGoesTest extends TestCase
         ]));
 
         $this->assertSame('A perfectly ordinary article', $data['https://good.test/article']['title']);
-        $this->assertSame('no_metadata', $data['http://localhost/lcc/track?u=9f2c1b']['error']);
+        $this->assertSame('not_previewable', $data['http://localhost/lcc/track?u=9f2c1b']['error']);
         $this->assertSame(['https://good.test/article'], $this->web->requested);
     }
 }

@@ -101,9 +101,9 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
         $meta = $this->meta($this->data($this->preview('http://localhost/d/1')));
 
         $this->assertCount(3, $meta, 'no tags here: the tags extension is not enabled');
-        $this->assertSame(['key' => 'author', 'text' => 'normal'], $meta[0]);
-        $this->assertSame(['key' => 'replies', 'count' => 3], $meta[1], 'four comments is three replies');
-        $this->assertSame('created', $meta[2]['key']);
+        $this->assertSame(['type' => 'user', 'text' => 'normal'], $meta[0]);
+        $this->assertSame(['type' => 'count', 'key' => 'datlechin-link-preview.forum.meta.replies', 'count' => 3], $meta[1], 'four comments is three replies');
+        $this->assertSame('date', $meta[2]['type']);
         $this->assertSameInstant('2026-01-01 00:00:00', $meta[2]['date']);
     }
 
@@ -152,10 +152,10 @@ class PreviewsDiscussionsFromTheDatabaseTest extends TestCase
     }
 
     #[Test]
-    public function a_discussion_address_carrying_something_that_is_not_an_id_has_no_metadata(): void
+    public function a_discussion_address_carrying_something_that_is_not_an_id_is_not_previewable(): void
     {
-        $this->assertSame('no_metadata', $this->data($this->preview('http://localhost/d/twelve'))['error']);
-        $this->assertSame('no_metadata', $this->data($this->preview('http://localhost/d/'))['error']);
+        $this->assertSame('not_previewable', $this->data($this->preview('http://localhost/d/twelve'))['error']);
+        $this->assertSame('not_previewable', $this->data($this->preview('http://localhost/d/'))['error']);
         $this->assertSame([], $this->web->requested);
     }
 

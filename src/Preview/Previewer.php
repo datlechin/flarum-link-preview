@@ -107,8 +107,7 @@ final class Previewer
                 return Preview::error($url, PreviewError::NotPreviewable);
             }
 
-            return $this->internal->preview($url, $actor)
-                ?? Preview::error($url, PreviewError::NoMetadata);
+            return $this->internal->preview($url, $actor);
         }
 
         return $this->cached($url);

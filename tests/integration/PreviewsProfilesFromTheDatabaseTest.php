@@ -70,8 +70,8 @@ class PreviewsProfilesFromTheDatabaseTest extends TestCase
         $meta = $this->meta($this->data($this->preview('http://localhost/u/normal')));
 
         $this->assertCount(2, $meta);
-        $this->assertSame(['key' => 'posts', 'count' => 7], $meta[0]);
-        $this->assertSame('joined', $meta[1]['key']);
+        $this->assertSame(['type' => 'count', 'key' => 'datlechin-link-preview.forum.meta.posts', 'count' => 7], $meta[0]);
+        $this->assertSame('date', $meta[1]['type']);
         $this->assertSameInstant('2025-03-04 05:06:07', $meta[1]['date']);
     }
 

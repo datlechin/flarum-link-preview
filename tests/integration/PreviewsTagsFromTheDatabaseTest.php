@@ -135,7 +135,7 @@ class PreviewsTagsFromTheDatabaseTest extends TestCase
     {
         $meta = $this->meta($this->data($this->preview('http://localhost/t/cooking')));
 
-        $this->assertSame([['key' => 'discussions', 'count' => 3]], $meta);
+        $this->assertSame([['type' => 'count', 'key' => 'datlechin-link-preview.forum.meta.discussions', 'count' => 3]], $meta);
     }
 
     #[Test]
@@ -157,11 +157,11 @@ class PreviewsTagsFromTheDatabaseTest extends TestCase
         $meta = $this->meta($this->data($this->preview('http://localhost/d/1')));
 
         $this->assertCount(5, $meta);
-        $this->assertSame(['key' => 'tag', 'text' => 'Cooking'], $meta[0]);
-        $this->assertSame(['key' => 'tag', 'text' => 'Bakeware'], $meta[1]);
-        $this->assertSame(['key' => 'author', 'text' => 'normal'], $meta[2]);
-        $this->assertSame(['key' => 'replies', 'count' => 3], $meta[3]);
-        $this->assertSame('created', $meta[4]['key']);
+        $this->assertSame(['type' => 'text', 'text' => 'Cooking'], $meta[0]);
+        $this->assertSame(['type' => 'text', 'text' => 'Bakeware'], $meta[1]);
+        $this->assertSame(['type' => 'user', 'text' => 'normal'], $meta[2]);
+        $this->assertSame(['type' => 'count', 'key' => 'datlechin-link-preview.forum.meta.replies', 'count' => 3], $meta[3]);
+        $this->assertSame('date', $meta[4]['type']);
     }
 
     #[Test]
@@ -179,7 +179,7 @@ class PreviewsTagsFromTheDatabaseTest extends TestCase
     {
         $data = $this->data($this->preview('http://localhost/tags'));
 
-        $this->assertSame('no_metadata', $data['error']);
+        $this->assertSame('not_previewable', $data['error']);
         $this->assertSame([], $this->web->requested);
     }
 

@@ -11,33 +11,34 @@
 
 namespace Datlechin\LinkPreview\Preview;
 
-use Flarum\Database\AbstractModel;
-use Flarum\Discussion\Discussion;
-use Flarum\Extension\ExtensionManager;
-use Flarum\Http\SlugManager;
+use Datlechin\LinkPreview\Internal\Card;
+use Datlechin\LinkPreview\Internal\MatchedRoute;
+use Datlechin\LinkPreview\Internal\RouteCard;
+use Datlechin\LinkPreview\Internal\RouteCards;
+use FastRoute\Dispatcher;
+use Flarum\Http\RouteCollection;
 use Flarum\Http\UrlGenerator;
-use Flarum\Post\CommentPost;
 use Flarum\Settings\SettingsRepositoryInterface;
-use Flarum\Tags\Tag;
 use Flarum\User\User;
-use Illuminate\Contracts\Filesystem\Cloud;
 use Illuminate\Contracts\Filesystem\Factory;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use s9e\TextFormatter\Utils;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 final class InternalPreviewer
 {
-    private const MAX_DESCRIPTION_LENGTH = 400;
-
     private ?array $origin = null;
 
     private string|false|null $favicon = false;
 
+    private ?Dispatcher $dispatcher = null;
+
     public function __construct(
         private UrlGenerator $url,
         private SettingsRepositoryInterface $settings,
-        private SlugManager $slugs,
-        private ExtensionManager $extensions,
+        private RouteCollection $routes,
+        private RouteCards $cards,
+        private Factory $filesystem,
+        private LoggerInterface $log,
     ) {
     }
 
@@ -46,7 +47,42 @@ final class InternalPreviewer
         return $this->forumPath($url) !== null;
     }
 
-    public function preview(string $url, User $actor): ?Preview
+    public function preview(string $url, User $actor): Preview
+    {
+        $route = $this->match($url);
+        $card = $route === null ? null : $this->cards->for($route->name);
+
+        if ($route === null || $card === null) {
+            return Preview::error($url, PreviewError::NotPreviewable);
+        }
+
+        $answer = $this->ask($card, $route, $actor);
+
+        if ($answer === null) {
+            return Preview::error($url, PreviewError::NoMetadata);
+        }
+
+        return Preview::internal(
+            url: $url,
+            type: $route->name,
+            card: $answer,
+            siteName: self::text($this->settings->get('forum_title')),
+            favicon: $this->faviconUrl(),
+        );
+    }
+
+    private function ask(RouteCard $card, MatchedRoute $route, User $actor): ?Card
+    {
+        try {
+            return $card->card($route, $actor);
+        } catch (Throwable $exception) {
+            $this->log->error($exception);
+
+            return null;
+        }
+    }
+
+    private function match(string $url): ?MatchedRoute
     {
         $path = $this->forumPath($url);
 
@@ -54,119 +90,18 @@ final class InternalPreviewer
             return null;
         }
 
-        if ($path === '') {
-            return $this->forum($url);
-        }
+        $match = $this->dispatcher()->dispatch('GET', $path);
 
-        if (preg_match('~^/d/(\d+)(?:-[^/]*)?(?:/([^/]*))?$~', $path, $matches) === 1) {
-            $near = $matches[2] ?? '';
-
-            return $near === '' || ctype_digit($near)
-                ? $this->discussion($url, (int) $matches[1], $actor)
-                : null;
-        }
-
-        if (preg_match('~^/u/([^/]+)$~', $path, $matches) === 1) {
-            return $this->user($url, $matches[1], $actor);
-        }
-
-        if (preg_match('~^/t/([^/]+)$~', $path, $matches) === 1) {
-            return $this->extensions->isEnabled('flarum-tags')
-                ? $this->tag($url, $matches[1], $actor)
-                : null;
-        }
-
-        return null;
-    }
-
-    private function discussion(string $url, int $id, User $actor): ?Preview
-    {
-        $discussion = Discussion::whereVisibleTo($actor)->find($id);
-
-        if (! $discussion instanceof Discussion) {
+        if ($match[0] !== Dispatcher::FOUND) {
             return null;
         }
 
-        $meta = [];
-
-        foreach ($this->tagNames($discussion, $actor) as $name) {
-            $meta[] = ['key' => 'tag', 'text' => $name];
-        }
-
-        $author = $discussion->user?->username;
-
-        if ($author !== null) {
-            $meta[] = ['key' => 'author', 'text' => $author];
-        }
-
-        $meta[] = ['key' => 'replies', 'count' => max(0, $discussion->comment_count - 1)];
-        $meta[] = ['key' => 'created', 'date' => $discussion->created_at->toAtomString()];
-
-        return Preview::internal(
-            url: $url,
-            type: 'discussion',
-            title: $discussion->title,
-            description: $this->excerpt($discussion, $actor),
-            siteName: self::text($this->settings->get('forum_title')),
-            favicon: $this->faviconUrl(),
-            meta: $meta,
-        );
+        return new MatchedRoute($match[1]['name'], $match[2], $url);
     }
 
-    private function user(string $url, string $slug, User $actor): ?Preview
+    private function dispatcher(): Dispatcher
     {
-        $user = $this->fromSlug(User::class, $slug, $actor);
-
-        if (! $user instanceof User) {
-            return null;
-        }
-
-        $meta = [['key' => 'posts', 'count' => $user->comment_count]];
-
-        if ($user->joined_at !== null) {
-            $meta[] = ['key' => 'joined', 'date' => $user->joined_at->toAtomString()];
-        }
-
-        return Preview::internal(
-            url: $url,
-            type: 'user',
-            title: $user->display_name,
-            siteName: self::text($this->settings->get('forum_title')),
-            favicon: $this->faviconUrl(),
-            meta: $meta,
-            image: $user->avatar_url,
-        );
-    }
-
-    private function tag(string $url, string $slug, User $actor): ?Preview
-    {
-        $tag = $this->fromSlug(Tag::class, $slug, $actor);
-
-        if (! $tag instanceof Tag) {
-            return null;
-        }
-
-        return Preview::internal(
-            url: $url,
-            type: 'tag',
-            title: $tag->name,
-            description: self::text($tag->description),
-            siteName: self::text($this->settings->get('forum_title')),
-            favicon: $this->faviconUrl(),
-            meta: [['key' => 'discussions', 'count' => $tag->discussion_count]],
-        );
-    }
-
-    private function forum(string $url): Preview
-    {
-        return Preview::internal(
-            url: $url,
-            type: 'forum',
-            title: self::text($this->settings->get('forum_title')),
-            description: self::text($this->settings->get('forum_description')),
-            siteName: $this->origin()['host'],
-            favicon: $this->faviconUrl(),
-        );
+        return $this->dispatcher ??= new Dispatcher\GroupCountBased($this->routes->getRouteData());
     }
 
     private function forumPath(string $url): ?string
@@ -195,70 +130,7 @@ final class InternalPreviewer
             $path = substr($path, strlen($base));
         }
 
-        return rtrim($path, '/');
-    }
-
-    /**
-     * @template T of AbstractModel
-     *
-     * @param  class-string<T>  $resource
-     * @return T|null
-     */
-    private function fromSlug(string $resource, string $slug, User $actor): ?AbstractModel
-    {
-        try {
-            return $this->slugs->forResource($resource)->fromSlug($slug, $actor);
-        } catch (ModelNotFoundException) {
-            return null;
-        }
-    }
-
-    private function excerpt(Discussion $discussion, User $actor): ?string
-    {
-        $post = $discussion->firstPost;
-
-        if (! $post instanceof CommentPost || ! $post->isVisibleTo($actor)) {
-            return null;
-        }
-
-        $xml = $post->parsed_content;
-
-        if (! is_string($xml) || $xml === '') {
-            return null;
-        }
-
-        $plain = trim(preg_replace('/\s+/', ' ', Utils::removeFormatting($xml)) ?? '');
-
-        if ($plain === '') {
-            return null;
-        }
-
-        return mb_substr($plain, 0, self::MAX_DESCRIPTION_LENGTH);
-    }
-
-    private function tagNames(Discussion $discussion, User $actor): array
-    {
-        if (! $this->extensions->isEnabled('flarum-tags')) {
-            return [];
-        }
-
-        $names = [];
-
-        $query = Tag::whereVisibleTo($actor)
-            ->join('discussion_tag', 'discussion_tag.tag_id', '=', 'tags.id')
-            ->where('discussion_tag.discussion_id', $discussion->id)
-            ->orderBy('tags.position');
-
-        foreach ($query->get(['tags.name']) as $tag) {
-            $names[] = $tag->name;
-        }
-
-        return $names;
-    }
-
-    private static function text(mixed $value): ?string
-    {
-        return is_string($value) && $value !== '' ? $value : null;
+        return '/'.trim($path, '/');
     }
 
     private function faviconUrl(): ?string
@@ -267,11 +139,7 @@ final class InternalPreviewer
             $path = $this->settings->get('favicon_path');
 
             if (is_string($path) && $path !== '') {
-                $filesystem = resolve(Factory::class);
-
-                $assets = $filesystem->disk('flarum-assets');
-
-                $this->favicon = $assets->url($path);
+                $this->favicon = $this->filesystem->disk('flarum-assets')->url($path);
             } else {
                 $this->favicon = null;
             }
@@ -290,9 +158,8 @@ final class InternalPreviewer
         $scheme = strtolower($base['scheme'] ?? 'https');
 
         return $this->origin = [
-            'scheme' => $scheme,
             'host' => self::host($base['host'] ?? ''),
-            'port' => self::port($scheme, $base['port'] ?? null),
+            'port' => $base['port'] ?? ($scheme === 'https' ? 443 : 80),
             'path' => rtrim($base['path'] ?? '', '/'),
         ];
     }
@@ -302,8 +169,8 @@ final class InternalPreviewer
         return trim(strtolower(rtrim(trim($host), '.')), '[]');
     }
 
-    private static function port(string $scheme, ?int $port): int
+    private static function text(mixed $value): ?string
     {
-        return $port ?? (strtolower($scheme) === 'https' ? 443 : 80);
+        return is_string($value) && $value !== '' ? $value : null;
     }
 }

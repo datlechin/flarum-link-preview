@@ -78,7 +78,7 @@ class PreviewsAForumInASubdirectoryTest extends TestCase
     public function the_base_path_itself_is_the_forum(): void
     {
         foreach (['http://localhost/forum', 'http://localhost/forum/'] as $url) {
-            $this->assertSame('forum', $this->data($this->preview($url))['type'], $url);
+            $this->assertSame('default', $this->data($this->preview($url))['type'], $url);
         }
 
         $this->assertSame([], $this->web->requested);
@@ -87,7 +87,7 @@ class PreviewsAForumInASubdirectoryTest extends TestCase
     #[Test]
     public function a_forum_page_without_a_card_is_not_fetched(): void
     {
-        $this->assertSame('no_metadata', $this->data($this->preview('http://localhost/forum/settings'))['error']);
+        $this->assertSame('not_previewable', $this->data($this->preview('http://localhost/forum/settings'))['error']);
         $this->assertSame([], $this->web->requested);
     }
 

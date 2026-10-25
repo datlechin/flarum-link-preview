@@ -12,6 +12,8 @@
 namespace Datlechin\LinkPreview\Preview;
 
 use Datlechin\LinkPreview\Html\Metadata;
+use Datlechin\LinkPreview\Internal\Card;
+use Datlechin\LinkPreview\Internal\Meta;
 
 final class Preview
 {
@@ -52,27 +54,19 @@ final class Preview
         );
     }
 
-    public static function internal(
-        string $url,
-        string $type,
-        ?string $title,
-        ?string $description = null,
-        ?string $siteName = null,
-        ?string $favicon = null,
-        array $meta = [],
-        ?string $image = null,
-    ): self {
+    public static function internal(string $url, string $type, Card $card, ?string $siteName, ?string $favicon): self
+    {
         return new self(
             url: $url,
             error: null,
             type: $type,
             layout: self::LAYOUT_COMPACT,
-            title: $title,
-            description: $description,
+            title: $card->title,
+            description: $card->description,
             siteName: $siteName,
             favicon: $favicon,
-            image: $image === null ? null : ['url' => $image, 'width' => null, 'height' => null],
-            meta: $meta,
+            image: $card->image === null ? null : ['url' => $card->image, 'width' => null, 'height' => null],
+            meta: array_map(fn (Meta $item): array => $item->toArray(), $card->meta),
         );
     }
 
