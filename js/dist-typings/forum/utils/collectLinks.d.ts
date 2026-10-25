@@ -5,4 +5,4 @@ export interface PreviewTarget {
     block: HTMLElement;
     mode: 'replace' | 'after';
 }
-export default function collectPreviewTargets(postBody: HTMLElement): PreviewTarget[];
+export default function collectPreviewTargets(body: HTMLElement): PreviewTarget[];

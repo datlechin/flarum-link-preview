@@ -5,10 +5,6 @@ import type Mithril from 'mithril';
 import type { MetaItem, PreviewLayout, PreviewSuccess } from '../../common/types';
 export interface LinkPreviewCardAttrs extends ComponentAttrs {
     link: HTMLAnchorElement;
-    /**
-     * Not always the anchor's `href`, which a click tracker rewrites to a route of
-     * its own. Everything but the `href` is decided from this.
-     */
     url: string;
     internal: boolean;
 }
@@ -36,9 +32,5 @@ export default class LinkPreviewCard extends Component<LinkPreviewCardAttrs> {
     protected remeasure(data: PreviewSuccess, image: HTMLImageElement): void;
     protected faviconUrl(data: PreviewSuccess, host: string): string | null;
     protected setting(name: string, fallback: boolean): boolean;
-    /**
-     * Callers pass the resolved `data.url` so a shortener names where it lands.
-     * The default is only for the states that have no answer to read it from.
-     */
     protected host(url?: string): string;
 }
