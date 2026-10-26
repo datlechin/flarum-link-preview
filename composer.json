@@ -1,6 +1,6 @@
 {
     "name": "datlechin/flarum-link-preview",
-    "description": "Rich previews for links in posts, fetched by the forum itself: title, description, image and site icon.",
+    "description": "Show a preview card for links in posts, with the page's title, description and image.",
     "keywords": [
         "flarum",
         "link preview",
@@ -24,7 +24,7 @@
         }
     ],
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "flarum/core": "^2.0.0-rc.7",
         "symfony/http-client": "^7.4",
         "symfony/http-foundation": "^7.4",

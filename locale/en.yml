@@ -4,53 +4,53 @@ datlechin-link-preview:
 
     sections:
       appearance_label: Appearance
-      appearance_description: How a preview looks, and where pressing it goes.
+      appearance_description: How preview cards look and where their links open.
       behaviour_label: Behaviour
-      behaviour_description: Which links in a post get a preview.
+      behaviour_description: Choose which links in a post get a preview.
       performance_label: Performance
-      performance_description: How previews are fetched and how long they are kept.
+      performance_description: How previews are loaded and how long they are cached.
       filtering_label: Filtering
       filtering_description: >
-        Which sites may be previewed. One entry per line, or separated by
-        commas. A host matches its subdomains too, and * stands for one part
-        of a name.
+        Choose which sites can be previewed. Enter one site per line, or separate
+        them with commas. A domain also matches its subdomains, and * matches one
+        part of a domain name, such as *.example.com.
 
     settings:
       open_links_in_new_tab_label: Open links in a new tab
-      open_links_in_new_tab_help: Other sites only. A discussion here always opens in the same tab.
+      open_links_in_new_tab_help: Applies to links to other sites. Links to this forum always open in the same tab.
 
       google_favicon_fallback_label: Fall back to Google for site icons
       google_favicon_fallback_help: >
-        Used when a site offers no icon of its own. It tells Google which sites
-        your members link to.
+        Uses Google's favicon service when a site has no icon. Google can then
+        see which sites your users link to.
 
       preview_internal_links_label: Preview links to this forum
       preview_internal_links_help: >
-        A link to a page here, such as a discussion, member, tag, the index, or
-        a page another extension describes, becomes a card read from the
-        database. Nothing is fetched, and nobody sees more than they could
-        already open.
+        Links to discussions, users, tags and other pages on this forum are
+        previewed from the database. Users only see what they have permission
+        to see.
 
       skip_media_links_label: Skip links to media files
-      skip_media_links_help: For links ending in an image, audio or video file, which Flarum already renders.
+      skip_media_links_help: Don't preview links to image, audio and video files.
 
       max_previews_per_post_label: Previews per post
-      max_previews_per_post_help: Links past this count are left as plain links.
+      max_previews_per_post_help: Links after this number are shown as plain links.
 
       enable_batch_requests_label: Fetch previews in batches
       enable_batch_requests_help: >
-        One request for the whole page instead of one per link. Turn it off only
-        if something in front of the forum rejects it.
+        Requests the previews on a page together instead of one request per
+        link. Turn this off only if a proxy or firewall in front of your forum
+        blocks these requests.
 
       cache_time_label: Cache duration (minutes)
-      cache_time_help: How long a preview is kept before the site is read again. 0 turns caching off.
+      cache_time_help: How long a preview is cached before the page is fetched again. Set to 0 to disable caching.
 
       allowlist_label: Allowed sites
-      allowlist_help: While this is not empty, only links matching it are previewed.
+      allowlist_help: If set, only links to these sites are previewed.
       allowlist_placeholder: "docs.example.com, *.wikipedia.org"
 
       blocklist_label: Blocked sites
-      blocklist_help: Never previewed, even when the allowed list lets them through.
+      blocklist_help: Links to these sites are never previewed, even if they are in the allowed sites.
       blocklist_placeholder: "example.com, news.example.org/sponsored"
 
   forum:
@@ -66,4 +66,4 @@ datlechin-link-preview:
 
     settings:
       hide_link_previews_label: Hide link previews
-      hide_link_previews_help: Show the plain address instead of a preview card in every post you read.
+      hide_link_previews_help: Show links as plain links instead of preview cards.
