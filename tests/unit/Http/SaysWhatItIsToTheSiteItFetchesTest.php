@@ -12,7 +12,6 @@
 namespace Datlechin\LinkPreview\Tests\unit\Http;
 
 use Flarum\Testing\unit\TestCase;
-use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -23,62 +22,48 @@ class SaysWhatItIsToTheSiteItFetchesTest extends TestCase
     #[Test]
     public function the_forum_names_itself_rather_than_claiming_to_be_a_browser(): void
     {
-        $this->fetch();
-
-        $this->assertMatchesRegularExpression('~link[ _-]?preview~i', $this->userAgent());
+        $this->assertMatchesRegularExpression('~link[ _-]?preview~i', $this->header('user-agent'));
     }
 
     #[Test]
     #[DataProvider('theBrowserItIsNot')]
     public function nothing_in_it_claims_to_be_a_person_at_a_browser(string $token): void
     {
-        $this->fetch();
-
-        $this->assertStringNotContainsStringIgnoringCase($token, $this->userAgent());
+        $this->assertStringNotContainsStringIgnoringCase($token, $this->header('user-agent'));
     }
 
     public static function theBrowserItIsNot(): array
     {
         return [
-            'the browser it used to name' => ['Chrome'],
-            'the engine underneath it' => ['AppleWebKit'],
-            'the other name that engine answers to' => ['Safari'],
-            'the desktop it claimed to be running on' => ['Windows NT'],
+            'Chrome' => ['Chrome'],
+            'AppleWebKit' => ['AppleWebKit'],
+            'Safari' => ['Safari'],
+            'Windows' => ['Windows NT'],
         ];
     }
 
     #[Test]
     public function nothing_in_it_says_which_reader_asked(): void
     {
-        $this->fetch();
-
-        $request = $this->handler->getLastRequest();
-
-        $this->assertNotNull($request);
-        $this->assertSame([], $request->getHeader('Cookie'));
-        $this->assertSame([], $request->getHeader('Referer'));
-        $this->assertSame([], $request->getHeader('X-Forwarded-For'));
+        $this->assertNull($this->header('cookie'));
+        $this->assertNull($this->header('referer'));
+        $this->assertNull($this->header('x-forwarded-for'));
     }
 
-    private function fetch(): void
+    #[Test]
+    public function compression_is_left_to_the_client(): void
     {
-        $fetcher = $this->fetcher([
-            new Response(200, ['Content-Type' => 'text/html'], '<html><head><title>A page</title></head></html>'),
-        ]);
-
-        $fetcher->fetch('https://example.com/a');
+        $this->assertNull($this->header('accept-encoding'));
     }
 
-    private function userAgent(): string
+    private function header(string $name): ?string
     {
-        $request = $this->handler->getLastRequest();
+        $this->fetcher([self::html('<html><head><title>A page</title></head></html>')])->fetch('https://example.com/a');
 
-        $this->assertNotNull($request, 'the fetcher never sent a request');
+        $this->assertNotEmpty($this->requests, 'the fetcher never sent a request');
 
-        $agent = $request->getHeaderLine('User-Agent');
+        $headers = $this->requests[0]['options']['normalized_headers'];
 
-        $this->assertNotSame('', $agent, 'a request with no user agent is not an honest one either');
-
-        return $agent;
+        return isset($headers[$name][0]) ? substr($headers[$name][0], strlen($name) + 2) : null;
     }
 }

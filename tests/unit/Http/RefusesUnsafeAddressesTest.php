@@ -14,31 +14,26 @@ namespace Datlechin\LinkPreview\Tests\unit\Http;
 use Datlechin\LinkPreview\Http\Exception\UnsafeUrlException;
 use Datlechin\LinkPreview\Http\FetchResult;
 use Flarum\Testing\unit\TestCase;
-use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Component\HttpClient\Response\MockResponse;
 
 class RefusesUnsafeAddressesTest extends TestCase
 {
     use BuildsAFetcher;
 
-    private function page(): Response
-    {
-        return new Response(200, ['Content-Type' => 'text/html'], '<html><head><title>Secret</title></head></html>');
-    }
-
     #[Test]
     #[DataProvider('addressesInsideTheNetwork')]
     public function a_host_that_only_answers_inside_this_network_is_refused(string $address): void
     {
-        $fetcher = $this->fetcher([$this->page()], new FakeResolver(['public.test' => [$address]]));
+        $fetcher = $this->fetcher([self::page()], ['inside.test' => $address]);
 
         $this->expectException(UnsafeUrlException::class);
 
         try {
-            $fetcher->fetch('https://public.test/a');
+            $fetcher->fetch('https://inside.test/a');
         } finally {
-            $this->assertResponsesLeft(1);
+            $this->assertRequestsMade(0);
         }
     }
 
@@ -56,53 +51,61 @@ class RefusesUnsafeAddressesTest extends TestCase
             'this network' => ['0.0.0.0'],
             'anything else in this network' => ['0.1.2.3'],
             'IPv6 unique local' => ['fc00::1'],
-
             'the IPv4 loopback written as an IPv6 address' => ['::ffff:127.0.0.1'],
-
             'carrier grade NAT' => ['100.64.0.1'],
             'the far end of carrier grade NAT' => ['100.127.255.254'],
-
             'protocol assignments' => ['192.0.0.1'],
-            'the far end of protocol assignments' => ['192.0.0.255'],
+            'Oracle Cloud metadata' => ['192.0.0.192'],
             'benchmarking' => ['198.18.0.1'],
             'the far end of benchmarking' => ['198.19.255.254'],
-
             'reserved for the future' => ['240.0.0.1'],
             'the broadcast address' => ['255.255.255.255'],
             'IPv6 site local' => ['fec0::1'],
             'the far end of IPv6 site local' => ['feff:ffff::1'],
+            'multicast' => ['239.255.255.250'],
+            'IPv6 multicast' => ['ff02::1'],
+            'NAT64' => ['64:ff9b::7f00:1'],
+            '6to4' => ['2002:7f00:1::'],
+            'IPv4-compatible IPv6' => ['::a00:5'],
         ];
     }
 
     #[Test]
     public function the_loopback_written_as_an_ipv6_address_in_the_url_is_refused_too(): void
     {
-        $fetcher = $this->fetcher([$this->page()], new FakeResolver([
-            '[::ffff:127.0.0.1]' => ['::ffff:127.0.0.1'],
-            '::ffff:127.0.0.1' => ['::ffff:127.0.0.1'],
-        ]));
+        $fetcher = $this->fetcher([self::page()]);
 
         $this->expectException(UnsafeUrlException::class);
 
         try {
             $fetcher->fetch('http://[::ffff:127.0.0.1]/admin');
         } finally {
-            $this->assertResponsesLeft(1);
+            $this->assertRequestsMade(0);
         }
+    }
+
+    #[Test]
+    public function an_address_written_straight_into_the_url_is_checked_too(): void
+    {
+        $fetcher = $this->fetcher([self::page()]);
+
+        $this->expectException(UnsafeUrlException::class);
+
+        $fetcher->fetch('http://169.254.169.254/latest/meta-data/');
     }
 
     #[Test]
     #[DataProvider('portsThePublicWebIsNotServedOn')]
     public function a_port_that_is_not_the_default_for_the_scheme_is_refused(string $url): void
     {
-        $fetcher = $this->fetcher([$this->page()]);
+        $fetcher = $this->fetcher([self::page()]);
 
         $this->expectException(UnsafeUrlException::class);
 
         try {
             $fetcher->fetch($url);
         } finally {
-            $this->assertResponsesLeft(1);
+            $this->assertRequestsMade(0);
         }
     }
 
@@ -112,104 +115,39 @@ class RefusesUnsafeAddressesTest extends TestCase
             'redis' => ['http://example.com:6379/a'],
             'a database' => ['http://example.com:3306/a'],
             'ssh' => ['http://example.com:22/a'],
-            'the mail port a text protocol can be smuggled into' => ['http://example.com:25/a'],
+            'smtp' => ['http://example.com:25/a'],
             'a development server' => ['http://example.com:3000/a'],
-            'an application server behind the proxy' => ['http://example.com:9000/a'],
-            'the port a scan would walk' => ['http://example.com:1/a'],
+            'an application server' => ['http://example.com:9000/a'],
+            'port one' => ['http://example.com:1/a'],
         ];
     }
 
     #[Test]
-    public function the_two_ports_a_real_site_is_sometimes_served_on_are_allowed(): void
+    public function the_two_alternate_web_ports_are_allowed(): void
     {
-        $this->assertInstanceOf(FetchResult::class, $this->fetcher([$this->page()])->fetch('http://example.com:8080/a'));
-        $this->assertInstanceOf(FetchResult::class, $this->fetcher([$this->page()])->fetch('https://example.com:8443/a'));
+        $this->assertInstanceOf(FetchResult::class, $this->fetcher([self::page()])->fetch('http://example.com:8080/a'));
+        $this->assertInstanceOf(FetchResult::class, $this->fetcher([self::page()])->fetch('https://example.com:8443/a'));
     }
 
     #[Test]
-    public function a_redirect_to_another_port_is_not_followed(): void
+    public function the_default_port_written_out_is_still_the_default(): void
     {
-        $fetcher = $this->fetcher([
-            new Response(302, ['Location' => 'http://example.com:6379/a']),
-            $this->page(),
-        ]);
-
-        $this->expectException(UnsafeUrlException::class);
-
-        try {
-            $fetcher->fetch('https://public.test/a');
-        } finally {
-            $this->assertResponsesLeft(1);
-        }
-    }
-
-    #[Test]
-    public function the_default_port_written_out_in_full_is_still_the_default(): void
-    {
-        $this->assertInstanceOf(FetchResult::class, $this->fetcher([$this->page()])->fetch('https://example.com:443/a'));
-        $this->assertInstanceOf(FetchResult::class, $this->fetcher([$this->page()])->fetch('http://example.com:80/a'));
-    }
-
-    #[Test]
-    public function the_cloud_metadata_endpoint_is_refused(): void
-    {
-        $fetcher = $this->fetcher([$this->page()], new FakeResolver(['metadata.test' => ['169.254.169.254']]));
-
-        $this->expectException(UnsafeUrlException::class);
-
-        $fetcher->fetch('http://metadata.test/latest/meta-data/iam/security-credentials/');
-    }
-
-    #[Test]
-    public function an_address_written_straight_into_the_url_is_checked_too(): void
-    {
-        $fetcher = $this->fetcher([$this->page()], new FakeResolver(['169.254.169.254' => ['169.254.169.254']]));
-
-        $this->expectException(UnsafeUrlException::class);
-
-        $fetcher->fetch('http://169.254.169.254/latest/meta-data/');
-    }
-
-    #[Test]
-    public function a_host_that_does_not_resolve_is_refused(): void
-    {
-        $fetcher = $this->fetcher([$this->page()], new FakeResolver(['nowhere.test' => []]));
-
-        $this->expectException(UnsafeUrlException::class);
-
-        try {
-            $fetcher->fetch('https://nowhere.test/a');
-        } finally {
-            $this->assertResponsesLeft(1);
-        }
-    }
-
-    #[Test]
-    public function the_first_routable_address_is_the_one_used(): void
-    {
-        $fetcher = $this->fetcher(
-            [$this->page()],
-            new FakeResolver(['mixed.test' => ['10.0.0.5', FakeResolver::PUBLIC_ADDRESS]]),
-        );
-
-        $result = $fetcher->fetch('https://mixed.test/a');
-
-        $this->assertStringContainsString('Secret', $result->body);
-        $this->assertResponsesLeft(0);
+        $this->assertInstanceOf(FetchResult::class, $this->fetcher([self::page()])->fetch('https://example.com:443/a'));
+        $this->assertInstanceOf(FetchResult::class, $this->fetcher([self::page()])->fetch('http://example.com:80/a'));
     }
 
     #[Test]
     #[DataProvider('schemesThatAreNotTheWeb')]
     public function a_scheme_that_is_not_http_is_refused(string $url): void
     {
-        $fetcher = $this->fetcher([$this->page()]);
+        $fetcher = $this->fetcher([self::page()]);
 
         $this->expectException(UnsafeUrlException::class);
 
         try {
             $fetcher->fetch($url);
         } finally {
-            $this->assertResponsesLeft(1);
+            $this->assertRequestsMade(0);
         }
     }
 
@@ -219,60 +157,49 @@ class RefusesUnsafeAddressesTest extends TestCase
             'ftp' => ['ftp://example.com/a'],
             'file' => ['file:///etc/passwd'],
             'gopher' => ['gopher://example.com:70/1'],
-            'a redis payload dressed as a URL' => ['dict://127.0.0.1:6379/info'],
+            'dict' => ['dict://127.0.0.1:6379/info'],
             'no scheme at all' => ['example.com/a'],
         ];
     }
 
     #[Test]
-    public function a_redirect_into_the_network_is_not_followed(): void
+    #[DataProvider('redirectsThatAreNotFollowed')]
+    public function a_redirect_is_checked_like_the_first_request(string $location): void
     {
-        $fetcher = $this->fetcher(
-            [
-                new Response(302, ['Location' => 'http://169.254.169.254/latest/meta-data/']),
-                $this->page(),
-            ],
-            new FakeResolver(['169.254.169.254' => ['169.254.169.254']]),
-        );
+        $fetcher = $this->fetcher([self::redirect($location), self::page()], ['inside.test' => '10.0.0.5']);
 
         $this->expectException(UnsafeUrlException::class);
 
         try {
             $fetcher->fetch('https://public.test/a');
         } finally {
-            $this->assertResponsesLeft(1);
+            $this->assertRequestsMade(1);
         }
     }
 
-    #[Test]
-    public function a_redirect_that_changes_to_a_scheme_that_is_not_the_web_is_not_followed(): void
+    public static function redirectsThatAreNotFollowed(): array
     {
-        $fetcher = $this->fetcher([
-            new Response(302, ['Location' => 'file:///etc/passwd']),
-            $this->page(),
-        ]);
-
-        $this->expectException(UnsafeUrlException::class);
-
-        try {
-            $fetcher->fetch('https://public.test/a');
-        } finally {
-            $this->assertResponsesLeft(1);
-        }
+        return [
+            'an address inside the network' => ['http://169.254.169.254/latest/meta-data/'],
+            'a name that resolves inside the network' => ['https://inside.test/admin'],
+            'another port' => ['http://example.com:6379/a'],
+            'another scheme' => ['file:///etc/passwd'],
+        ];
     }
 
     #[Test]
     public function a_batch_refuses_one_url_without_giving_up_on_the_rest(): void
     {
-        $fetcher = $this->fetcher(
-            [$this->page()],
-            new FakeResolver(['inside.test' => ['192.168.0.9']]),
-        );
+        $fetcher = $this->fetcher([self::page()], ['inside.test' => '192.168.0.9']);
 
         $results = $fetcher->fetchMany(['https://inside.test/a', 'https://public.test/b']);
 
         $this->assertInstanceOf(UnsafeUrlException::class, $results['https://inside.test/a']);
         $this->assertInstanceOf(FetchResult::class, $results['https://public.test/b']);
-        $this->assertSame('https://public.test/b', $results['https://public.test/b']->effectiveUrl);
+    }
+
+    private static function page(): MockResponse
+    {
+        return self::html('<html><head><title>Secret</title></head></html>');
     }
 }

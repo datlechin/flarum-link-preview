@@ -13,7 +13,7 @@ namespace Datlechin\LinkPreview\Tests\integration;
 
 use Datlechin\LinkPreview\Api\Controller\ShowLinkPreview;
 use Datlechin\LinkPreview\Api\Controller\ShowLinkPreviewBatch;
-use Datlechin\LinkPreview\Http\Resolver;
+use Datlechin\LinkPreview\Http\HeadFetcher;
 use Flarum\Testing\integration\RetrievesAuthorizedUsers;
 use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
@@ -35,9 +35,17 @@ class WiresItselfUpTest extends TestCase
     }
 
     #[Test]
-    public function the_resolver_the_fetcher_asks_for_is_bound(): void
+    public function the_container_can_build_the_fetcher(): void
     {
-        $this->assertInstanceOf(Resolver::class, $this->app()->getContainer()->make(Resolver::class));
+        $this->assertInstanceOf(HeadFetcher::class, $this->app()->getContainer()->make(HeadFetcher::class));
+    }
+
+    #[Test]
+    public function the_fetcher_it_builds_refuses_private_addresses(): void
+    {
+        $this->assertSame('unsafe_address', $this->data($this->preview('http://127.0.0.1/'))['error']);
+        $this->assertSame('unsafe_address', $this->data($this->preview('http://169.254.169.254/latest/meta-data/'))['error']);
+        $this->assertSame('unsafe_address', $this->data($this->preview('http://192.0.0.192/'))['error']);
     }
 
     #[Test]

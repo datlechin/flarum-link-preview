@@ -13,11 +13,12 @@ namespace Datlechin\LinkPreview\Preview;
 
 use Datlechin\LinkPreview\Html\Metadata;
 use Datlechin\LinkPreview\Html\MetadataExtractor;
+use Datlechin\LinkPreview\Http\Exception\BlockedUrlException;
 use Datlechin\LinkPreview\Http\Exception\LinkPreviewException;
 use Datlechin\LinkPreview\Http\Exception\UnsafeUrlException;
 use Datlechin\LinkPreview\Http\Exception\UnsupportedContentException;
 use Datlechin\LinkPreview\Http\FetchResult;
-use Datlechin\LinkPreview\Http\SafeFetcher;
+use Datlechin\LinkPreview\Http\HeadFetcher;
 use Datlechin\LinkPreview\Settings\Config;
 use Flarum\User\User;
 use Illuminate\Cache\Repository;
@@ -30,7 +31,7 @@ final class Previewer
 
     public function __construct(
         private Config $config,
-        private SafeFetcher $fetcher,
+        private HeadFetcher $fetcher,
         private MetadataExtractor $extractor,
         private InternalPreviewer $internal,
         private Repository $cache,
@@ -46,7 +47,7 @@ final class Previewer
         }
 
         try {
-            return $this->fromResult($url, $this->fetcher->fetch($url, $this->hopFilter()));
+            return $this->fromResult($url, $this->fetcher->fetch($url, $this->filter()->allows(...)));
         } catch (LinkPreviewException $exception) {
             return $this->fromFailure($url, $exception);
         }
@@ -79,7 +80,7 @@ final class Previewer
         }
 
         $remaining = array_keys($pending);
-        $results = $this->fetcher->fetchMany($remaining, $this->hopFilter());
+        $results = $this->fetcher->fetchMany($remaining, $this->filter()->allows(...));
 
         foreach ($remaining as $url) {
             $result = $results[$url] ?? null;
@@ -119,7 +120,7 @@ final class Previewer
             return $this->fail($url, PreviewError::Blocked);
         }
 
-        $metadata = $this->extractor->extract($result->body, $result->effectiveUrl, $result->contentType);
+        $metadata = $this->extractor->extract($result->html, $result->effectiveUrl, $result->contentType);
 
         if ($metadata->isEmpty()) {
             return $this->fail($url, PreviewError::NoMetadata);
@@ -156,19 +157,6 @@ final class Previewer
         $status = $exception === null ? 0 : $exception->getCode();
 
         return $status >= 100 && $status <= 599;
-    }
-
-    private function hopFilter(): callable
-    {
-        $filter = $this->filter();
-
-        return static function (string $url) use ($filter): bool {
-            if (! $filter->allows($url)) {
-                throw new BlockedUrlException("Refusing to fetch $url, which the forum's lists do not allow.");
-            }
-
-            return true;
-        };
     }
 
     private function fail(string $url, PreviewError $error): Preview

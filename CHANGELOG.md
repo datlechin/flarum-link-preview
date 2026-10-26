@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- No preview for pages whose head is larger than 1 MiB, such as Google Play app pages.
+
+### Changed
+
+- Pages are fetched with Symfony HttpClient, which Flarum already ships, and its `NoPrivateNetworkHttpClient` guards the addresses.
+- Responses are requested with gzip, and the limit is 2 MiB of decoded HTML instead of 1 MiB on the wire.
+- The transport is bound as `datlechin-link-preview.transport`, so it can be replaced, for example to add a proxy.
+
 ## 2.1.0
 
 ### Added

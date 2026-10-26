@@ -53,7 +53,7 @@ Anyone who can read a post can ask your server to fetch a URL, so:
 - Loopback, private and reserved addresses are refused, IPv4 and IPv6. The connection is pinned to the address that was checked, so DNS cannot swap in an internal one afterwards.
 - Redirects are followed by hand, three hops at most, each one checked again.
 - `http` and `https` only. TLS is always verified.
-- 1 MiB and 8 seconds per page, 30 requests a minute per member.
+- Reading stops at the end of the page's `<head>`, 2 MiB of HTML at most, 8 seconds per page, 30 requests a minute per member.
 - Failures are cached too, so a dead domain is not retried on every page view.
 
 Older versions could fall back to a third-party oEmbed service. That sent your members' links to someone else's server, so it is gone.

@@ -11,20 +11,15 @@
 
 namespace Datlechin\LinkPreview\Tests\integration;
 
-use Datlechin\LinkPreview\Http\Resolver;
+use Datlechin\LinkPreview\LinkPreviewServiceProvider;
 use Flarum\Extend\ExtenderInterface;
 use Flarum\Extension\Extension;
-use GuzzleHttp\Client;
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Promise\Create;
-use GuzzleHttp\Promise\PromiseInterface;
-use GuzzleHttp\Psr7\Response;
 use Illuminate\Contracts\Container\Container;
-use Psr\Http\Message\RequestInterface;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-final class FakeWeb implements ExtenderInterface, Resolver
+final class FakeWeb implements ExtenderInterface
 {
     public array $requested = [];
 
@@ -32,60 +27,53 @@ final class FakeWeb implements ExtenderInterface, Resolver
 
     private array $pages = [];
 
-    public function host(string $host, string ...$addresses): self
+    public function host(string $host, string $address): self
     {
-        $this->hosts[strtolower($host)] = array_values($addresses);
+        $this->hosts[strtolower($host)] = $address;
 
         return $this;
     }
 
     public function page(string $url, string $body, string $contentType = 'text/html; charset=utf-8', int $status = 200): self
     {
-        $this->pages[$url] = ['status' => $status, 'headers' => ['Content-Type' => $contentType], 'body' => $body];
+        $this->pages[$url] = [
+            'body' => $body,
+            'info' => ['http_code' => $status, 'response_headers' => ['Content-Type' => $contentType]],
+        ];
 
         return $this;
     }
 
     public function redirect(string $from, string $to, int $status = 302): self
     {
-        $this->pages[$from] = ['status' => $status, 'headers' => ['Location' => $to], 'body' => ''];
+        $this->pages[$from] = [
+            'body' => '',
+            'info' => ['http_code' => $status, 'response_headers' => ['Location' => $to], 'redirect_url' => $to],
+        ];
 
         return $this;
     }
 
     public function extend(Container $container, ?Extension $extension = null): void
     {
-        $container->instance(Resolver::class, $this);
-        $container->instance(ClientInterface::class, new Client(['handler' => HandlerStack::create($this)]));
+        $container->instance(LinkPreviewServiceProvider::TRANSPORT, new MockHttpClient($this->respond(...)));
+
+        $container->extend(
+            LinkPreviewServiceProvider::HTTP_CLIENT,
+            fn (HttpClientInterface $client) => $client->withOptions(['resolve' => $this->hosts]),
+        );
     }
 
-    public function resolve(string $host): array
+    private function respond(string $method, string $url, array $options): MockResponse
     {
-        $literal = trim($host, '[]');
-
-        if (filter_var($literal, FILTER_VALIDATE_IP) !== false) {
-            return [$literal];
-        }
-
-        return $this->hosts[strtolower($host)] ?? [];
-    }
-
-    public function __invoke(RequestInterface $request, array $options): PromiseInterface
-    {
-        $url = (string) $request->getUri();
-
         $this->requested[] = $url;
 
         $page = $this->pages[$url] ?? null;
 
         if ($page === null) {
-            return Create::rejectionFor(new ConnectException("Nothing answers at $url.", $request));
+            return new MockResponse('', ['error' => "Nothing answers at $url."]);
         }
 
-        return Create::promiseFor(new Response(
-            $page['status'],
-            $page['headers'],
-            $page['body'],
-        ));
+        return new MockResponse($page['body'], $page['info']);
     }
 }
