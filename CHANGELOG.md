@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-26
+
 ### Fixed
 
 - Pages with a `<head>` larger than 1 MiB, such as Google Play app pages, got no preview.
@@ -88,7 +90,8 @@ Requires Flarum 2.0. The extension was rewritten.
 - Only `http` and `https` URLs are fetched, and TLS certificates are always verified.
 - Each page is limited to 1 MiB and 8 seconds, and each user to 30 requests per minute. Failed previews are cached.
 
-[Unreleased]: https://github.com/datlechin/flarum-link-preview/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/datlechin/flarum-link-preview/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/datlechin/flarum-link-preview/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/datlechin/flarum-link-preview/compare/v2.0.2...v2.1.0
 [2.0.2]: https://github.com/datlechin/flarum-link-preview/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/datlechin/flarum-link-preview/compare/v2.0.0...v2.0.1
