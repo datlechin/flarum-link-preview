@@ -9,9 +9,8 @@
  * file that was distributed with this source code.
  */
 
-namespace Datlechin\LinkPreview\Http;
+namespace Datlechin\LinkPreview\Http\Exception;
 
-interface Resolver
+final class BlockedUrlException extends LinkPreviewException
 {
-    public function resolve(string $host): array;
 }

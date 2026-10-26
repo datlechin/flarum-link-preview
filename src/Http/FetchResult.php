@@ -14,7 +14,7 @@ namespace Datlechin\LinkPreview\Http;
 final class FetchResult
 {
     public function __construct(
-        public readonly string $body,
+        public readonly string $html,
         public readonly string $effectiveUrl,
         public readonly ?string $contentType,
     ) {
