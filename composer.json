@@ -27,7 +27,7 @@
         "php": "^8.3",
         "flarum/core": "^2.0.0-rc.7",
         "symfony/http-client": "^7.4",
-        "symfony/http-foundation": "^7.4",
+        "symfony/http-foundation": "^8.1.10",
         "ext-dom": "*",
         "ext-mbstring": "*",
         "ext-json": "*"
